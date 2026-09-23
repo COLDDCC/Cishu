@@ -51,9 +51,9 @@ a { color: var(--link); }
 .input-area { margin: 14px 0; }
 #input {
   width: 100%;
-  padding: 12px 14px;
-  font-size: 17px;
-  line-height: 1.7;
+  padding: 16px 20px;
+  font-size: 28px;
+  line-height: 1.6;
   border: 2px solid var(--line);
   border-radius: 6px;
   background: var(--bg);
@@ -62,6 +62,8 @@ a { color: var(--link); }
   font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans CJK JP", sans-serif;
 }
 #input:focus { outline: none; border-color: var(--accent); }
+#input::placeholder { color: var(--muted); opacity: .7; }
+#analyze { font-size: 18px; padding: 10px 28px; }
 .input-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .status { color: var(--muted); font-size: 13px; }
 
@@ -178,4 +180,5 @@ dialog h2 { margin: 0 0 4px; font-size: 18px; }
   .entry-meaning { grid-column: 1 / -1; }
   .know { grid-column: 2; grid-row: 1; }
   .entry-word .head { font-size: 26px; }
+  #input { font-size: 22px; padding: 12px 14px; }
 }
