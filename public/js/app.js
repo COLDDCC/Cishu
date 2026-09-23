@@ -50,7 +50,7 @@
     tokenizer = t;
     dict = new Analyzer.Dictionary(rows);
     el.analyze.disabled = false;
-    el.status.textContent = `就绪 · 词典 ${rows.length.toLocaleString()} 条 · Ctrl+Enter 或点放大镜开始分析`;
+    el.status.textContent = `就绪 · 词典 ${rows.length.toLocaleString()} 条 · 按 Enter 或点放大镜开始分析`;
     if (el.input.value.trim()) run();
   }).catch((e) => {
     el.status.textContent = String(e.message || e);
@@ -68,23 +68,38 @@
     }
     result = Analyzer.analyze(text, tokenizer, dict);
     render();
+    // 单行框里回到开头显示（Jisho 也是从第一句开始显示）
+    if (document.activeElement !== el.input) { el.input.scrollTop = 0; el.input.scrollLeft = 0; }
   }
 
   el.analyze.addEventListener("click", run);
-  // 输入框随内容自动长高（像 Jisho 的单行搜索框，粘贴长文时再展开）
-  function autosize() {
-    el.input.style.height = "auto";
-    el.input.style.height = Math.min(el.input.scrollHeight, window.innerHeight * 0.4) + "px";
-  }
-  el.input.addEventListener("input", autosize);
-  autosize();
+  // 输入框和 Jisho 一样是单行的：Enter 直接分析，Shift+Enter 才换行
   el.input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run();
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); run(); }
   });
-  el.input.addEventListener("paste", () => setTimeout(() => tokenizer && run(), 0));
+
+  // 搜索框左边的三个输入方式
+  const setText = (t) => { el.input.value = t; run(); };
+  $("pasteBtn").addEventListener("click", async () => {
+    try { setText(await navigator.clipboard.readText()); }
+    catch (e) { el.status.textContent = "浏览器不允许读取剪贴板，请直接在输入框里 Ctrl+V。"; el.input.focus(); }
+  });
+  $("sampleBtn").addEventListener("click", () => setText(
+    "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。" +
+    "何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。"));
+  $("fileInput").addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    f.text().then(setText);
+    e.target.value = "";
+  });
+  el.input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run(); // 旧快捷键也保留
+  });
+  el.input.addEventListener("paste", () => setTimeout(() => { if (tokenizer) { el.input.blur(); run(); } }, 0));
+  el.input.addEventListener("blur", () => { el.input.scrollTop = 0; el.input.scrollLeft = 0; });
   el.clear.addEventListener("click", () => {
     el.input.value = "";
-    autosize();
     run();
     el.input.focus();
   });

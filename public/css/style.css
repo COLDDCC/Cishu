@@ -58,38 +58,50 @@ a:hover { text-decoration: underline; }
 .logo a { color: var(--accent); text-decoration: none; }
 .nav a { color: var(--muted); font-size: 15px; }
 
-/* ---------- 搜索框（Jisho 那种粗灰边的大框） ---------- */
-.search { border: 5px solid var(--box); border-radius: 5px; background: var(--box); }
-.search-inner { display: flex; align-items: flex-start; background: var(--field); border-radius: 2px; }
+/* ---------- 搜索区：左边输入方式图标 + 粗灰边单行搜索框（照 Jisho） ---------- */
+.search-row { display: flex; align-items: center; gap: 22px; }
+.input-methods { display: flex; gap: 6px; flex: none; }
+.input-method {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 64px; padding: 4px 0; border: 0; border-radius: 4px;
+  background: transparent; color: var(--soft); cursor: pointer; font: inherit;
+}
+.input-method:hover { background: var(--hover); color: var(--fg); }
+.input-method svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.input-method span { font-size: 15px; line-height: 1.2; }
+
+.search { flex: 1; min-width: 0; border: 5px solid var(--box); border-radius: 6px; }
+.search-inner { display: flex; align-items: center; background: var(--field); padding: 5px; gap: 4px; }
+.search-type { flex: none; display: flex; align-items: center; padding: 0 10px 0 12px; border-right: 1px solid var(--line); height: 40px; }
+.search-type select {
+  border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 17px; cursor: pointer;
+  -webkit-appearance: none; appearance: none; padding-right: 14px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 4px center, right 0 center; background-size: 4px 4px; background-repeat: no-repeat;
+}
 #input {
   flex: 1;
   min-width: 0;
+  height: 52px;
   border: 0;
   outline: none;
   resize: none;
   background: transparent;
   color: var(--fg);
   font-size: 26px;
-  line-height: 1.5;
-  padding: 12px 16px;
-  min-height: 63px;
-  overflow-y: auto;
+  line-height: 52px;
+  padding: 0 10px;
+  white-space: pre;
+  overflow: hidden;
 }
 #input::placeholder { color: var(--muted); opacity: .8; }
 .icon-btn {
-  flex: none;
-  width: 56px;
-  height: 63px;
-  border: 0;
-  background: transparent;
-  color: var(--soft);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
+  flex: none; width: 52px; height: 52px; border: 0; border-radius: 2px;
+  background: transparent; color: var(--soft); cursor: pointer; display: grid; place-items: center;
 }
-.icon-btn svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.icon-btn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
 .icon-btn:hover { color: var(--fg); }
-.icon-btn.submit { background: var(--hover); width: 64px; }
+.icon-btn.submit { background: var(--hover); width: 56px; }
 .icon-btn.submit:disabled { cursor: wait; opacity: .5; }
 .status { color: var(--muted); font-size: 14px; margin: 6px 0 0; min-height: 21px; }
 
@@ -210,9 +222,12 @@ dialog h2 { margin: 0 0 4px; font-size: 20px; }
 }
 @media (max-width: 640px) {
   .logo { font-size: 30px; }
-  #input { font-size: 20px; min-height: 54px; padding: 12px; }
-  .icon-btn { height: 54px; width: 44px; }
-  .icon-btn.submit { width: 50px; }
+  .search-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .input-methods { justify-content: flex-start; }
+  #input { font-size: 20px; height: 44px; line-height: 44px; }
+  .icon-btn { height: 44px; width: 40px; }
+  .icon-btn.submit { width: 44px; }
+  .search-type { padding: 0 6px; height: 34px; }
   .zen { font-size: 20px; }
   .concept { grid-template-columns: 1fr; padding-bottom: 36px; }
   .representation { font-size: 32px; }
