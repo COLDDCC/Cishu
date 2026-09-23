@@ -1,16 +1,16 @@
-/* 布局先照 Jisho：左边词形+振假名+标签，右边词性+释义 */
+/* 布局参考 Jisho：左边词形+振假名+标签，右边词性+释义。主色：藍色 #165E83 */
 :root {
   --bg: #fff;
   --fg: #222;
   --muted: #888;
   --line: #e4e4e4;
-  --accent: #47db27;
-  --accent-ink: #1f7a0c;
-  --tag-bg: #8abc83;
-  --tag-jlpt: #909dc0;
+  --accent: #165e83;
+  --accent-ink: #165e83;
+  --tag-bg: #6c8fa6;
+  --tag-jlpt: #165e83;
   --panel: #f7f7f7;
   --known: #bbb;
-  --link: #3b6fb6;
+  --link: #165e83;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -18,13 +18,13 @@
     --fg: #e8e8e8;
     --muted: #999;
     --line: #333;
-    --accent: #3fbf22;
-    --accent-ink: #7ee063;
-    --tag-bg: #4f7a49;
-    --tag-jlpt: #5b6687;
+    --accent: #2f7fae;
+    --accent-ink: #8cc3e6;
+    --tag-bg: #4a6477;
+    --tag-jlpt: #2f7fae;
     --panel: #252528;
     --known: #666;
-    --link: #7fa8e0;
+    --link: #8cc3e6;
   }
 }
 
