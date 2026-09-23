@@ -35,6 +35,22 @@
   });
   el.input.value = store.get("cishu.draft", "");
 
+  // ---------- 主题：跟随系统 → 浅色 → 深色 ----------
+  const themeBtn = $("themeBtn");
+  const THEMES = { auto: "主题：自动", light: "主题：浅色", dark: "主题：深色" };
+  function applyTheme(t) {
+    if (t === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = t;
+    themeBtn.textContent = THEMES[t];
+    try { localStorage.setItem("cishu.theme", t); } catch (e) { /* 忽略 */ }
+  }
+  let theme = document.documentElement.dataset.theme || "auto";
+  themeBtn.textContent = THEMES[theme];
+  themeBtn.addEventListener("click", () => {
+    theme = { auto: "light", light: "dark", dark: "auto" }[theme];
+    applyTheme(theme);
+  });
+
   // ---------- 加载分词器和词典 ----------
   let tokenizer = null, dict = null, result = null;
 

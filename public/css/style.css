@@ -16,7 +16,7 @@
   --known: #c4c4c4;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1c1d1f;
     --fg: #dedede;
     --muted: #8a8a8a;
@@ -32,6 +32,22 @@
     --field: #232427;
     --known: #555;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1d1f;
+  --fg: #dedede;
+  --muted: #8a8a8a;
+  --soft: #aaa;
+  --line: #333;
+  --box: #3a3b3e;
+  --hover: #2a2b2e;
+  --accent: #4a9ccc;
+  --link: #7fb8dc;
+  --label: #5d6789;
+  --label-soft: #555;
+  --footer: #232427;
+  --field: #232427;
+  --known: #555;
 }
 
 * { box-sizing: border-box; }
@@ -53,10 +69,14 @@ a:hover { text-decoration: underline; }
 [hidden] { display: none !important; }
 
 /* ---------- 顶部 ---------- */
-.site-header { display: flex; align-items: center; justify-content: space-between; padding-top: 18px; padding-bottom: 10px; }
-.logo { margin: 0; font-size: 36px; line-height: 1; font-weight: 700; letter-spacing: .04em; }
-.logo a { color: var(--accent); text-decoration: none; }
-.nav a { color: var(--muted); font-size: 15px; }
+.site-header { display: flex; align-items: flex-start; justify-content: space-between; padding-top: 14px; padding-bottom: 6px; }
+.logo { margin: 0; font-size: 64px; line-height: 1; font-weight: 800; letter-spacing: -.02em; }
+.logo a { position: relative; display: inline-block; color: #5a5a5a; text-decoration: none; padding-top: 22px; }
+.logo .seal { position: absolute; left: 4px; top: 2px; width: 16px; height: 16px; border-radius: 3px; background: var(--accent); }
+:root[data-theme="dark"] .logo a { color: #cfcfcf; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .logo a { color: #cfcfcf; } }
+.nav { display: flex; gap: 28px; padding-top: 8px; }
+.nav a { color: var(--link); font-size: 20px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 /* ---------- 搜索区：左边输入方式图标 + 粗灰边单行搜索框（照 Jisho） ---------- */
 .search-row { display: flex; align-items: center; gap: 22px; }
@@ -221,7 +241,9 @@ dialog h2 { margin: 0 0 4px; font-size: 20px; }
   .footer-cols { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .logo { font-size: 30px; }
+  .logo { font-size: 44px; }
+  .nav { gap: 16px; }
+  .nav a { font-size: 16px; }
   .search-row { flex-direction: column; align-items: stretch; gap: 8px; }
   .input-methods { justify-content: flex-start; }
   #input { font-size: 20px; height: 44px; line-height: 44px; }

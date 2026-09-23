@@ -7,11 +7,15 @@
   <meta name="description" content="粘贴任意日文，列出所有词的读音、原形、中文释义和 JLPT 等级。纯静态，分词在浏览器里完成。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2218%22 fill=%22%23165e83%22/%3E%3Ctext x=%2250%22 y=%2272%22 font-size=%2262%22 text-anchor=%22middle%22 fill=%22white%22%3E%E8%AF%8D%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css">
+  <script>try { var t = localStorage.getItem("cishu.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
 <body>
   <header class="site-header row">
-    <h1 class="logo"><a href="./">词书</a></h1>
-    <nav class="nav"><a href="https://github.com/COLDDCC/Cishu" target="_blank" rel="noopener">关于</a></nav>
+    <h1 class="logo"><a href="./"><span class="seal" aria-hidden="true"></span>词书</a></h1>
+    <nav class="nav">
+      <a href="https://github.com/COLDDCC/Cishu" target="_blank" rel="noopener">关于</a>
+      <a id="themeBtn" role="button" title="切换浅色 / 深色 / 跟随系统">主题</a>
+    </nav>
   </header>
 
   <div class="row search-row">
