@@ -9,75 +9,99 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <h1 class="logo">词书 <small>Cishu</small></h1>
-      <p class="tagline">粘贴日文 → 生词表。分词和查词都在你的浏览器里完成，不上传任何内容。</p>
-    </div>
+  <header class="site-header row">
+    <h1 class="logo"><a href="./">词书</a></h1>
+    <nav class="nav"><a href="https://github.com/COLDDCC/Cishu" target="_blank" rel="noopener">关于</a></nav>
   </header>
 
-  <main class="wrap">
-    <section class="input-area">
-      <textarea id="input" rows="4" placeholder="在这里粘贴任意日文：小说、歌词、新闻、吐槽……"></textarea>
-      <div class="input-actions">
-        <button id="analyze" class="primary" disabled>加载中…</button>
-        <button id="clear" class="ghost">清空</button>
-        <span id="status" class="status"></span>
+  <div class="row">
+    <form class="search" id="searchForm" onsubmit="return false">
+      <div class="search-inner">
+        <textarea id="input" rows="1" lang="ja" spellcheck="false"
+          placeholder="粘贴任意日文：小说、歌词、新闻、吐槽……"></textarea>
+        <button type="button" id="clear" class="icon-btn" title="清空" aria-label="清空">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <button type="submit" id="analyze" class="icon-btn submit" title="分析 (Ctrl+Enter)" aria-label="分析" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+        </button>
       </div>
-    </section>
+    </form>
+    <p id="status" class="status"></p>
+  </div>
 
-    <section id="toolbar" class="toolbar" hidden>
-      <label class="tool">
-        等级
-        <select id="level">
-          <option value="0">全部</option>
-          <option value="4">N4 及以上</option>
-          <option value="3">N3 及以上</option>
-          <option value="2">N2 及以上</option>
-          <option value="1">N1 及以上</option>
-        </select>
-      </label>
-      <label class="tool">
-        排序
-        <select id="sort">
-          <option value="order">出现顺序</option>
-          <option value="count">出现次数</option>
-          <option value="level">难度（难→易）</option>
-        </select>
-      </label>
-      <label class="tool check"><input type="checkbox" id="furigana" checked> 振假名</label>
-      <label class="tool check"><input type="checkbox" id="showKnown"> 显示已认识的词</label>
-      <span class="spacer"></span>
-      <button id="export" class="ghost">导出生词表</button>
-    </section>
+  <main class="row">
+    <section id="sentence" class="zen" lang="ja" hidden></section>
 
-    <section id="summary" class="summary" hidden></section>
-    <section id="sentence" class="sentence" hidden></section>
-    <section id="results" class="results"></section>
+    <div class="columns">
+      <div id="primary" class="primary">
+        <h4 id="summary" class="block-title" hidden></h4>
+        <section id="results" class="results"></section>
+      </div>
+
+      <aside id="toolbar" class="secondary" hidden>
+        <div class="side-block">
+          <h4 class="block-title">筛选</h4>
+          <label class="side-row">JLPT 等级
+            <select id="level">
+              <option value="0">全部</option>
+              <option value="4">N4 及以上</option>
+              <option value="3">N3 及以上</option>
+              <option value="2">N2 及以上</option>
+              <option value="1">N1 及以上</option>
+            </select>
+          </label>
+          <label class="side-row">排序
+            <select id="sort">
+              <option value="order">出现顺序</option>
+              <option value="count">出现次数</option>
+              <option value="level">难度（难→易）</option>
+            </select>
+          </label>
+          <label class="side-row check"><input type="checkbox" id="furigana" checked> 显示振假名</label>
+          <label class="side-row check"><input type="checkbox" id="showKnown"> 显示已认识的词</label>
+        </div>
+        <div class="side-block">
+          <h4 class="block-title">生词表</h4>
+          <p class="minor">导出当前显示的词（已按等级筛选，不含认识的词）。</p>
+          <button type="button" id="export" class="button">导出生词表</button>
+        </div>
+        <div class="side-block tip">
+          <h4 class="block-title">小提示</h4>
+          <p class="minor">点上方原文里的词，会跳到对应词条。点词条下的「认识」可以把它勾掉，下次也会自动隐藏。</p>
+        </div>
+      </aside>
+    </div>
 
     <dialog id="exportDialog">
       <form method="dialog">
         <h2>导出生词表</h2>
-        <p class="hint">导出当前列表里显示的词（已应用等级筛选，不含勾掉的认识词）。</p>
+        <p class="minor">导出当前列表里显示的词（已应用等级筛选，不含勾掉的认识词）。</p>
         <textarea id="exportText" rows="12" readonly></textarea>
         <div class="dialog-actions">
-          <button type="button" id="copyExport" class="ghost">复制</button>
-          <button type="button" id="downloadCsv" class="ghost">下载 CSV（Excel / Anki）</button>
-          <button type="button" id="downloadTxt" class="ghost">下载 TXT</button>
+          <button type="button" id="copyExport" class="button secondary-btn">复制</button>
+          <button type="button" id="downloadCsv" class="button secondary-btn">下载 CSV（Excel / Anki）</button>
+          <button type="button" id="downloadTxt" class="button secondary-btn">下载 TXT</button>
           <span class="spacer"></span>
-          <button value="close" class="primary">关闭</button>
+          <button value="close" class="button">关闭</button>
         </div>
       </form>
     </dialog>
   </main>
 
-  <footer class="site-footer wrap">
-    <p>
-      分词：<a href="https://github.com/takuyaa/kuromoji.js">kuromoji.js</a>（IPADIC，Apache-2.0）。
-      词条与英文释义：<a href="https://www.edrdg.org/jmdict/j_jmdict.html">JMdict</a>（CC BY-SA 4.0，EDRDG）。
-      中文释义：<a href="https://github.com/lxl66566/Japanese-Chinese-thesaurus">Japanese-Chinese-thesaurus</a>（Unlicense）及本项目补译。
-      JLPT 等级：<a href="https://github.com/jamsinclair/open-anki-jlpt-decks">open-anki-jlpt-decks</a>（MIT），非官方，仅供参考。
-    </p>
+  <footer class="site-footer">
+    <div class="ornament"></div>
+    <div class="row footer-cols">
+      <p>词书是一个纯静态网页：分词和查词都在你的浏览器里完成，不上传任何内容。</p>
+      <p>
+        分词：<a href="https://github.com/takuyaa/kuromoji.js">kuromoji.js</a>（IPADIC，Apache-2.0）。
+        词条与英文释义：<a href="https://www.edrdg.org/jmdict/j_jmdict.html">JMdict</a>（CC BY-SA 4.0，EDRDG）。
+      </p>
+      <p>
+        中文释义：<a href="https://github.com/lxl66566/Japanese-Chinese-thesaurus">Japanese-Chinese-thesaurus</a>（Unlicense）及本项目补译。
+        JLPT 等级：<a href="https://github.com/jamsinclair/open-anki-jlpt-decks">open-anki-jlpt-decks</a>（MIT），非官方，仅供参考。
+      </p>
+    </div>
   </footer>
 
   <script src="vendor/kuromoji.js"></script>

@@ -50,11 +50,9 @@
     tokenizer = t;
     dict = new Analyzer.Dictionary(rows);
     el.analyze.disabled = false;
-    el.analyze.textContent = "分析";
-    el.status.textContent = `就绪 · 词典 ${rows.length.toLocaleString()} 条`;
+    el.status.textContent = `就绪 · 词典 ${rows.length.toLocaleString()} 条 · Ctrl+Enter 或点放大镜开始分析`;
     if (el.input.value.trim()) run();
   }).catch((e) => {
-    el.analyze.textContent = "加载失败";
     el.status.textContent = String(e.message || e);
     console.error(e);
   });
@@ -73,12 +71,20 @@
   }
 
   el.analyze.addEventListener("click", run);
+  // 输入框随内容自动长高（像 Jisho 的单行搜索框，粘贴长文时再展开）
+  function autosize() {
+    el.input.style.height = "auto";
+    el.input.style.height = Math.min(el.input.scrollHeight, window.innerHeight * 0.4) + "px";
+  }
+  el.input.addEventListener("input", autosize);
+  autosize();
   el.input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run();
   });
   el.input.addEventListener("paste", () => setTimeout(() => tokenizer && run(), 0));
   el.clear.addEventListener("click", () => {
     el.input.value = "";
+    autosize();
     run();
     el.input.focus();
   });
@@ -127,19 +133,26 @@
     const ws = visibleWords();
     const knownCount = result.words.filter((w) => known.has(knownId(w))).length;
     el.summary.innerHTML =
-      `共 <b>${result.words.length}</b> 个不同的词，当前显示 <b>${ws.length}</b> 个` +
-      (knownCount ? `，其中 ${knownCount} 个已标为认识` + (el.showKnown.checked ? "" : "（已隐藏）") : "") +
-      `。<span class="muted">点原文里的词可跳到对应词条。</span>`;
+      `词语<span class="result-count"> — 共 ${result.words.length} 个，显示 ${ws.length} 个` +
+      (knownCount ? `，${knownCount} 个已认识` + (el.showKnown.checked ? "" : "（已隐藏）") : "") + `</span>`;
 
     // 原文：按词分段，带振假名
     const shown = new Set(ws.map((w) => w.key));
-    el.sentence.innerHTML = result.segments.map((s) => {
-      if (s.surface === "\n") return "<br>";
+    // 原文拆成一个个词块（Jisho 的 zen bar）：振假名在上，词在下；换行另起一行
+    const lines = [[]];
+    for (const s of result.segments) {
+      const parts = s.surface.split("\n");
+      parts.forEach((p, i) => {
+        if (i > 0) lines.push([]);
+        if (p.trim()) lines[lines.length - 1].push({ ...s, surface: p });
+      });
+    }
+    el.sentence.innerHTML = lines.filter((l) => l.length).map((line) => "<ul>" + line.map((s) => {
       const inner = s.key && Analyzer.hasKanji(s.surface) ? rubyHtml(s.surface, s.reading) : esc(s.surface);
-      if (!s.key) return `<span class="seg">${inner}</span>`;
-      const cls = shown.has(s.key) ? "seg word" : "seg word dim";
-      return `<a class="${cls}" href="#w-${encodeURIComponent(s.key)}">${inner}</a>`;
-    }).join("").replace(/\n/g, "<br>");
+      if (!s.key) return `<li class="jw">${inner}</li>`;
+      const cls = shown.has(s.key) ? "jw" : "jw dim";
+      return `<li class="${cls}"><a href="#w-${encodeURIComponent(s.key)}" data-key="${esc(s.key)}">${inner}</a></li>`;
+    }).join("") + "</ul>").join("");
 
     el.results.innerHTML = ws.map(wordHtml).join("");
   }
@@ -147,50 +160,63 @@
   function wordHtml(w) {
     const isKnown = known.has(knownId(w));
     const tags = [];
-    if (w.jlpt) tags.push(`<span class="tag jlpt">JLPT <b>N${w.jlpt}</b></span>`);
-    if (w.proper) tags.push(`<span class="tag">专有名词</span>`);
-    tags.push(`<span class="tag count">出现 <b>${w.count}</b> 次</span>`);
+    if (w.jlpt) tags.push(`<span class="label">JLPT N${w.jlpt}</span>`);
+    if (w.proper) tags.push(`<span class="label">专有名词</span>`);
+    tags.push(`<span class="label label-count">出现 ${w.count} 次</span>`);
 
-    let meaning;
-    if (w.zh) meaning = `<div class="zh">${esc(w.zh).replace(/；/g, "<span class=\"sep\">；</span>")}</div>`;
-    else if (w.en) meaning = `<div class="en"><span class="tag en-tag">暂无中文 · 英文释义</span> ${esc(w.en)}</div>`;
-    else meaning = `<div class="none">词典未收录（可能是人名、地名或新词）</div>`;
+    // 释义按「；」拆成编号义项，和 Jisho 一样 1. 2. 3.
+    let meanings;
+    if (w.zh) {
+      meanings = w.zh.split("；").filter(Boolean).map((m, i) =>
+        `<div class="meaning"><span class="divider">${i + 1}. </span><span class="meaning-text">${esc(m)}</span></div>`).join("");
+    } else if (w.en) {
+      meanings = `<div class="meaning"><span class="divider">1. </span><span class="meaning-text" lang="en">${esc(w.en)}</span>` +
+        `<span class="supplemental">暂无中文释义，以上为英文</span></div>`;
+    } else {
+      meanings = `<div class="meaning"><span class="meaning-text muted">词典未收录（可能是人名、地名或新词）</span></div>`;
+    }
 
     const surf = w.surfaces.filter((s) => s !== w.word);
-    const extra = [];
-    if (surf.length) extra.push(`原文写作：${surf.map(esc).join("、")}`);
-    if (w.otherForms.length) extra.push(`其他写法：${w.otherForms.map(esc).join("、")}`);
-
     return `
-      <article class="entry${isKnown ? " known" : ""}" id="w-${encodeURIComponent(w.key)}">
-        <div class="entry-word">
-          <div class="head" lang="ja">${rubyHtml(w.word, w.reading)}</div>
-          ${Analyzer.hasKanji(w.word) ? `<div class="reading" lang="ja">${esc(w.reading)}</div>` : ""}
-          <div class="tags">${tags.join("")}</div>
-        </div>
-        <div class="entry-meaning">
-          ${w.pos ? `<div class="pos">${esc(w.pos)}</div>` : ""}
-          ${meaning}
-          ${extra.length ? `<div class="extra" lang="ja">${extra.join("　")}</div>` : ""}
-          <div class="links">
-            <a href="https://jisho.org/search/${encodeURIComponent(w.word)}" target="_blank" rel="noopener">Jisho</a>
-            <a href="https://www.weblio.jp/content/${encodeURIComponent(w.word)}" target="_blank" rel="noopener">Weblio</a>
+      <article class="concept${isKnown ? " known" : ""}" id="w-${encodeURIComponent(w.key)}">
+        <div class="concept-word">
+          <div class="representation" lang="ja">${rubyHtml(w.word, w.reading)}</div>
+          <div class="status">
+            ${tags.join(" ")}
+            <a href="#" class="status-link know" data-id="${esc(knownId(w))}">${isKnown ? "撤销认识" : "✓ 认识"}</a>
+            <a class="status-link" href="https://www.weblio.jp/content/${encodeURIComponent(w.word)}" target="_blank" rel="noopener">Weblio</a>
           </div>
         </div>
-        <button class="know" data-id="${esc(knownId(w))}" title="${isKnown ? "取消认识" : "我认识这个词，勾掉它"}">
-          ${isKnown ? "撤销" : "✓ 认识"}
-        </button>
+        <div class="concept-meanings">
+          ${w.pos ? `<div class="meaning-tags">${esc(w.pos)}</div>` : ""}
+          ${meanings}
+          ${w.otherForms.length ? `<div class="meaning-tags">其他写法</div><div class="meaning" lang="ja"><span class="meaning-text">${w.otherForms.map((f) => `${esc(f)} 【${esc(w.reading)}】`).join("、")}</span></div>` : ""}
+          ${surf.length ? `<div class="meaning-tags">原文写作</div><div class="meaning" lang="ja"><span class="meaning-text">${surf.map(esc).join("、")}</span></div>` : ""}
+        </div>
+        <a class="details-link" href="https://jisho.org/search/${encodeURIComponent(w.word)}" target="_blank" rel="noopener">Jisho ▸</a>
       </article>`;
   }
 
   el.results.addEventListener("click", (e) => {
-    const b = e.target.closest("button.know");
+    const b = e.target.closest(".know");
     if (!b) return;
+    e.preventDefault();
     const id = b.dataset.id;
     if (known.has(id)) known.delete(id);
     else known.add(id);
     saveKnown();
     render();
+  });
+
+  // 点原文里的词：跳到词条并高亮（Jisho 的 current）
+  el.sentence.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-key]");
+    if (!a) return;
+    el.sentence.querySelectorAll("a.current").forEach((x) => x.classList.remove("current"));
+    el.sentence.querySelectorAll(`a[data-key="${CSS.escape(a.dataset.key)}"]`).forEach((x) => x.classList.add("current"));
+    el.results.querySelectorAll(".concept.current").forEach((x) => x.classList.remove("current"));
+    const target = document.getElementById("w-" + encodeURIComponent(a.dataset.key));
+    if (target) target.classList.add("current");
   });
 
   // ---------- 导出 ----------
