@@ -1,0 +1,24 @@
+{
+  "name": "cishu",
+  "version": "0.1.0",
+  "description": "粘贴日文，生成带中文释义和 JLPT 等级的生词表（纯静态）",
+  "scripts": {
+    "fetch": "bash scripts/fetch_sources.sh",
+    "build:dict": "python3 scripts/build_dict.py",
+    "serve": "python3 -m http.server 8000 -d public",
+    "test": "node scripts/smoke_test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/COLDDCC/Cishu.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/COLDDCC/Cishu/issues"
+  },
+  "homepage": "https://github.com/COLDDCC/Cishu#readme",
+  "devDependencies": {
+    "kuromoji": "^0.1.2"
+  },
+  "private": true
+}
