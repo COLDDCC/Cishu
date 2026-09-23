@@ -147,9 +147,9 @@
   function wordHtml(w) {
     const isKnown = known.has(knownId(w));
     const tags = [];
-    if (w.jlpt) tags.push(`<span class="tag jlpt n${w.jlpt}">JLPT N${w.jlpt}</span>`);
+    if (w.jlpt) tags.push(`<span class="tag jlpt">JLPT <b>N${w.jlpt}</b></span>`);
     if (w.proper) tags.push(`<span class="tag">专有名词</span>`);
-    tags.push(`<span class="tag count">出现 ${w.count} 次</span>`);
+    tags.push(`<span class="tag count">出现 <b>${w.count}</b> 次</span>`);
 
     let meaning;
     if (w.zh) meaning = `<div class="zh">${esc(w.zh).replace(/；/g, "<span class=\"sep\">；</span>")}</div>`;
