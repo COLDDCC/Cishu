@@ -90,6 +90,10 @@ def split_forms(expr):
     return [f.strip() for f in re.split(r"[;；,、]", expr) if f.strip() and not re.search(r"[～〜]", f)]
 
 
+# JLPT 词表源文件里的个别错误：(错误写法, 读音) → 正确写法
+JLPT_FIX = {("副", "とりわけ"): ["取り分け", "とりわけ"]}
+
+
 def load_jlpt():
     """返回 {(词形, 读音): 等级}，同一词取最简单的等级。"""
     lv = {}
@@ -99,6 +103,8 @@ def load_jlpt():
             for row in csv.DictReader(f):
                 forms = split_forms(row["expression"])
                 readings = [kata_to_hira(r) for r in split_forms(row["reading"])]
+                if forms and readings and (forms[0], readings[0]) in JLPT_FIX:
+                    forms = JLPT_FIX[(forms[0], readings[0])]
                 if not forms:
                     continue
                 for fm in forms:
@@ -148,6 +154,8 @@ def main():
         if v.get("altWord"):
             forms += [f for f in split_forms(v["altWord"]) if f not in forms]
         reading = kata_to_hira((split_forms(v["reading"]) or [v["reading"]])[0])
+        if (forms[0], reading) in JLPT_FIX:
+            continue  # 源数据里的错误写法（另由 JLPT 表补正）
         key = (forms[0], reading)
         if key in seen:
             continue
@@ -183,6 +191,8 @@ def main():
 
     # zh-extra.tsv 里 JMdict 常用词没有的词（口语、网络用语等）作为新词条加入
     for forms, reading, _, pos in extra_rows:
+        if (forms[0], reading) in JLPT_FIX:
+            continue
         hit = next((index[(fm, reading)] for fm in forms if (fm, reading) in index), None)
         if hit:  # 已有词条：补上新写法（如「ヤバ」）
             for fm in forms:
