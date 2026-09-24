@@ -87,6 +87,7 @@ def load(path):
         gloss = gloss.replace("．", "，").replace(",", "，")  # 统一成中文逗号
         gloss = gloss.rstrip("。.")
         gloss = re.sub(r"［[^］]*］", "", gloss)  # 去掉「［コーヒーが～］」这类例句
+        gloss = re.sub(r"^[" + KANA + r"]+（[^）]*）\[[^\]]*\]", "", gloss)  # 「むね（棟）[名]屋脊」
         gloss = re.sub(r"\s+", " ", gloss).strip()
         if not gloss:
             continue

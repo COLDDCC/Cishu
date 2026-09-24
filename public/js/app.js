@@ -162,6 +162,7 @@
     el.sentence.hidden = !has || location.hash.startsWith("#kanji/");
     if (!has) {
       el.results.innerHTML = result ? `<p class="empty">没有找到日语词。</p>` : "";
+      updateZenToggle();
       return;
     }
 
@@ -190,7 +191,20 @@
     }).join("") + "</ul>").join("");
 
     el.results.innerHTML = ws.map(wordHtml).join("");
+    updateZenToggle();
   }
+
+  // 原文太长时只显示约半屏，可展开
+  const zenToggle = $("zenToggle");
+  function updateZenToggle() {
+    const tall = !el.sentence.hidden && (el.sentence.classList.contains("expanded") || el.sentence.scrollHeight > el.sentence.clientHeight + 4);
+    zenToggle.hidden = !tall;
+    zenToggle.textContent = el.sentence.classList.contains("expanded") ? "收起原文" : "展开全文";
+  }
+  zenToggle.addEventListener("click", () => {
+    el.sentence.classList.toggle("expanded");
+    updateZenToggle();
+  });
 
   function wordHtml(w) {
     const isKnown = known.has(knownId(w));
@@ -215,7 +229,7 @@
     return `
       <article class="concept${isKnown ? " known" : ""}" id="w-${encodeURIComponent(w.key)}">
         <div class="concept-word">
-          <div class="representation" lang="ja">${rubyHtml(w.word, w.reading)}</div>
+          <div class="representation${w.word.length > 7 ? " longer" : w.word.length > 4 ? " long" : ""}" lang="ja">${rubyHtml(w.word, w.reading)}</div>
           <div class="status">
             ${tags.join(" ")}
             <a href="#" class="status-link know" data-id="${esc(knownId(w))}">${isKnown ? "撤销认识" : "✓ 认识"}</a>
@@ -273,6 +287,7 @@
     kanjiView.hidden = !inKanji;
     mainColumns.hidden = inKanji;
     el.sentence.hidden = inKanji || !(result && result.words.length);
+    updateZenToggle();
     if (!inKanji) return;
     let c;
     try { c = decodeURIComponent(m[1]); } catch (e) { c = m[1]; }

@@ -29,8 +29,8 @@
       });
     }
 
-    // 给分词得到的原形找词条；reading 为原形的平假名读音（可能为空）
-    lookup(base, reading) {
+    // 给分词得到的原形找词条；reading 为原形的平假名读音（可能为空），pos 为分词器给的词性
+    lookup(base, reading, pos) {
       const score = (i) => {
         const r = this.rows[i];
         let s = 0;
@@ -45,15 +45,19 @@
       if (ids) return best(ids);
 
       if (isKana(base)) {
+        // 假名写的词常对应汉字词条（わかる→分かる、ところ→所、あと→後）。
+        // 但按读音硬凑容易张冠李戴（しんと→信徒）：动词、形容词照常；其他词性只认有 JLPT 等级的常用词
         ids = this.byReading.get(kataToHira(base));
-        if (ids) return best(ids);
-        return -1;
+        if (!ids) return -1;
+        if (pos !== "動詞" && pos !== "形容詞") ids = ids.filter((i) => this.rows[i][F.JLPT]);
+        return ids.length ? best(ids) : -1;
       }
-      // 写法不同（如「終る」对「終わる」）：同读音且共享汉字
+      // 写法不同（如「終る」对「終わる」）：同读音，且原词的每个汉字都出现在词条写法里（避免「不急」→「不朽」）
       if (reading) {
+        const kanji = [...base].filter(hasKanji);
         ids = (this.byReading.get(reading) || []).filter((i) => {
-          const w = this.rows[i][F.WORD] + (this.rows[i][F.ALT] || "");
-          return [...base].some((c) => hasKanji(c) && w.includes(c));
+          const forms = [this.rows[i][F.WORD]].concat(this.rows[i][F.ALT] ? this.rows[i][F.ALT].split("|") : []);
+          return forms.some((f) => kanji.every((c) => f.includes(c)));
         });
         if (ids.length) return best(ids);
       }
@@ -106,10 +110,11 @@
     for (let i = 0; i < tokens.length; i++) {
       let merged = null;
       // 第一个词不能是助词/助动词/数字/非自立成分（否则「上げてしまった」会被合成感叹词「しまった」）
-      if (!NO_MERGE_POS.has(tokens[i].pos) && tokens[i].pos_detail_1 !== "数" && tokens[i].pos_detail_1 !== "非自立") {
+      if (!NO_MERGE_POS.has(tokens[i].pos) && tokens[i].pos_detail_1 !== "非自立") {
         for (let len = 3; len >= 2 && !merged; len--) {
           const span = tokens.slice(i, i + len);
           if (span.length < len || span.some((t) => t.pos === "記号" || !t.surface_form.trim())) continue;
+          if (span.every((t) => t.pos_detail_1 === "数")) continue; // 纯数字（「二十」「三百」）不合并
           // 中间夹助词的不合并（「雨が降る」应拆成 雨 / 降る），助词只允许在最后（こちらこそ、何でも）
           if (span.slice(1, -1).some((t) => t.pos === "助詞" || t.pos === "助動詞")) continue;
           const surface = span.map((t) => t.surface_form).join("");
@@ -146,7 +151,7 @@
 
       const base = t.basic_form && t.basic_form !== "*" ? t.basic_form : t.surface_form;
       const reading = baseReading(t);
-      const idx = dict.lookup(base, reading);
+      const idx = dict.lookup(base, reading, t.pos);
       const key = idx >= 0 ? "#" + idx : base + "|" + reading;
       seg.key = key;
 
@@ -159,7 +164,7 @@
           word: row ? pickForm(row, base) : base,
           reading: row ? row[F.READING] : reading,
           otherForms: row ? formsOf(row).filter((f) => f !== pickForm(row, base)) : [],
-          pos: row && row[F.POS] ? row[F.POS] : posZh(t),
+          pos: row && row[F.POS] ? row[F.POS] : t.merged ? "" : posZh(t),
           jlpt: row ? row[F.JLPT] : 0,
           zh: row ? row[F.ZH] : "",
           en: row ? row[F.EN] : "",
