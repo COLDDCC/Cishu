@@ -83,7 +83,9 @@ def load(path):
                 reading = inner.replace("・", "")
             val = val[m.end():]
         pos, gloss = _strip_pos(val)
-        gloss = re.sub(r"^(?:名|形[12]?|动[123]?|副|连体|接续|叹)\s+", "", gloss)  # 残留的词性缩写「形1 热乎」
+        gloss = re.sub(r"^(?:名|形[12]?|动[123]?|副|连体|接续|叹|连|专有词|专|熟语)\s+", "", gloss)  # 残留标签「形1 热乎」「专有词 北」
+        gloss = gloss.replace("．", "，").replace(",", "，")  # 统一成中文逗号
+        gloss = gloss.rstrip("。.")
         gloss = re.sub(r"［[^］]*］", "", gloss)  # 去掉「［コーヒーが～］」这类例句
         gloss = re.sub(r"\s+", " ", gloss).strip()
         if not gloss:

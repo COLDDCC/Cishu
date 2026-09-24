@@ -122,8 +122,8 @@ def load_extra_zh():
             parts = line.rstrip("\n").split("\t")
             if len(parts) < 3 or not parts[2].strip():
                 continue
-            forms = [fm.strip() for fm in parts[0].split("|") if fm.strip()]
-            reading = kata_to_hira(parts[1].strip())
+            forms = [f for fm in parts[0].split("|") for f in (split_forms(fm) or [fm.strip()]) if f]
+            reading = kata_to_hira((split_forms(parts[1]) or [parts[1].strip()])[0])
             for fm in forms:
                 out[(fm, reading)] = parts[2].strip()
             rows.append((forms, reading, parts[2].strip(), parts[3].strip() if len(parts) > 3 else ""))
@@ -143,8 +143,11 @@ def main():
     entries = []  # dict: forms, reading, pos, jlpt, en
     seen = {}
     for v in vocab:
-        forms = [v["word"]] + ([v["altWord"]] if v.get("altWord") else [])
-        reading = kata_to_hira(v["reading"])
+        # 个别条目的词形写成「いい; よい」，拆成多个写法
+        forms = split_forms(v["word"]) or [v["word"]]
+        if v.get("altWord"):
+            forms += [f for f in split_forms(v["altWord"]) if f not in forms]
+        reading = kata_to_hira((split_forms(v["reading"]) or [v["reading"]])[0])
         key = (forms[0], reading)
         if key in seen:
             continue

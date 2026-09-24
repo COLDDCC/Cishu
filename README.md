@@ -60,6 +60,11 @@ npm run build:dict          # 生成 public/dict/dict.json
 npm test                    # 看看分词和释义对不对
 ```
 
+浏览器端到端测试（需要 Playwright）：先 `npm run serve`，再 `BASE=http://localhost:8000/ node scripts/e2e_test.js`，会把所有按钮和交互跑一遍。
+
+```bash
+```
+
 `python3 scripts/build_dict.py --missing 缺释义.tsv` 会列出还没有中文释义的词。补好的释义按「词形⇥读音⇥释义」一行一条写进 `data-src/zh-extra.tsv`，重新 build 即可（优先级最高，也可以用来改正现有释义）。
 
 ## 数据来源与许可

@@ -69,9 +69,15 @@
 
   // 不进入词表的词性
   function skipToken(t) {
-    const p = t.pos, d1 = t.pos_detail_1;
+    if (t.merged) return false;
+    const p = t.pos, d1 = t.pos_detail_1, d2 = t.pos_detail_2;
     if (p === "記号" || p === "助詞" || p === "助動詞" || p === "フィラー" || p === "その他") return true;
-    if (d1 === "数" || d1 === "非自立" || d1 === "接尾" && p === "動詞") return true;
+    if (d1 === "数" || (d1 === "接尾" && p === "動詞")) return true;
+    if (d1 === "非自立") {
+      // わけ・はず・ところ・こと・もの・まま 这类非自立名词对学习者很重要，保留；
+      // の・ん 和「よう・そう・みたい」这种助动词词干是语法成分，跳过；非自立的动词/形容词（ている的いる等）也跳过
+      if (p !== "名詞" || d2 === "助動詞語幹" || t.surface_form === "の" || t.surface_form === "ん") return true;
+    }
     if (!/[぀-ヿ㐀-鿿々]/.test(t.surface_form)) return true; // 纯英数、空白
     return false;
   }
@@ -81,6 +87,7 @@
     const cache = new Map();
     return function baseReading(t) {
       const base = t.basic_form && t.basic_form !== "*" ? t.basic_form : t.surface_form;
+      if (t.merged && base !== t.surface_form) return "";
       if (base === t.surface_form && t.reading) return kataToHira(t.reading);
       if (isKana(base)) return kataToHira(base);
       if (cache.has(base)) return cache.get(base);
@@ -91,10 +98,44 @@
     };
   }
 
+  // 相邻 2～3 个词拼起来是词典里的词就合并（分词器会把「とんでもない」切成「とんでも」+「ない」）。
+  // 先试原文原样拼接，再试「前面原样 + 最后一个词的原形」（落ち着き+ました 这类不会命中，因为结尾是助动词）。
+  const NO_MERGE_POS = new Set(["記号", "助詞", "助動詞", "フィラー", "その他"]);
+  function mergeTokens(tokens, dict) {
+    const out = [];
+    for (let i = 0; i < tokens.length; i++) {
+      let merged = null;
+      // 第一个词不能是助词/助动词/数字/非自立成分（否则「上げてしまった」会被合成感叹词「しまった」）
+      if (!NO_MERGE_POS.has(tokens[i].pos) && tokens[i].pos_detail_1 !== "数" && tokens[i].pos_detail_1 !== "非自立") {
+        for (let len = 3; len >= 2 && !merged; len--) {
+          const span = tokens.slice(i, i + len);
+          if (span.length < len || span.some((t) => t.pos === "記号" || !t.surface_form.trim())) continue;
+          // 中间夹助词的不合并（「雨が降る」应拆成 雨 / 降る），助词只允许在最后（こちらこそ、何でも）
+          if (span.slice(1, -1).some((t) => t.pos === "助詞" || t.pos === "助動詞")) continue;
+          const surface = span.map((t) => t.surface_form).join("");
+          const last = span[len - 1];
+          const lastBase = last.basic_form && last.basic_form !== "*" ? last.basic_form : last.surface_form;
+          const base = span.slice(0, -1).map((t) => t.surface_form).join("") + lastBase;
+          const hit = dict.byForm.has(surface) ? surface : (last.pos !== "助動詞" && last.pos !== "助詞" && dict.byForm.has(base)) ? base : null;
+          if (hit) {
+            merged = {
+              surface_form: surface, basic_form: hit, merged: true,
+              reading: span.every((t) => t.reading) ? span.map((t) => t.reading).join("") : "",
+              pos: span[0].pos, pos_detail_1: "", pos_detail_2: "",
+            };
+            i += len - 1;
+          }
+        }
+      }
+      out.push(merged || tokens[i]);
+    }
+    return out;
+  }
+
   // 主函数：文本 → { tokens: 原文分段, words: 去重后的词表 }
   function analyze(text, tokenizer, dict) {
     const baseReading = makeBaseReader(tokenizer);
-    const tokens = tokenizer.tokenize(text);
+    const tokens = mergeTokens(tokenizer.tokenize(text), dict);
     const words = new Map();
     const segs = [];
 

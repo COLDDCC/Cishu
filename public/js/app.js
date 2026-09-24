@@ -83,6 +83,7 @@
       return;
     }
     result = Analyzer.analyze(text, tokenizer, dict);
+    if (location.hash.startsWith("#kanji/")) location.hash = ""; // 在汉字页里分析：回到生词表
     render();
     // 单行框里回到开头显示（Jisho 也是从第一句开始显示）
     if (document.activeElement !== el.input) { el.input.scrollTop = 0; el.input.scrollLeft = 0; }
@@ -106,11 +107,14 @@
   $("fileInput").addEventListener("change", (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    f.text().then(setText);
+    // 日文小说的 txt 常是 Shift-JIS 编码：先按 UTF-8 严格解码，失败再用 Shift-JIS
+    f.arrayBuffer().then((buf) => {
+      let text;
+      try { text = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+      catch (err) { text = new TextDecoder("shift_jis").decode(buf); }
+      setText(text.replace(/^\ufeff/, ""));
+    });
     e.target.value = "";
-  });
-  el.input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run(); // 旧快捷键也保留
   });
   el.input.addEventListener("paste", () => setTimeout(() => { if (tokenizer) { el.input.blur(); run(); } }, 0));
   el.input.addEventListener("blur", () => { el.input.scrollTop = 0; el.input.scrollLeft = 0; });
@@ -270,7 +274,8 @@
     mainColumns.hidden = inKanji;
     el.sentence.hidden = inKanji || !(result && result.words.length);
     if (!inKanji) return;
-    const c = decodeURIComponent(m[1]);
+    let c;
+    try { c = decodeURIComponent(m[1]); } catch (e) { c = m[1]; }
     kanjiView.innerHTML = `<p class="minor">正在加载汉字数据…</p>`;
     window.scrollTo(0, 0);
     Promise.all([KanjiPage.load(), dictP.catch(() => null)]).then(([data, rows]) => {
