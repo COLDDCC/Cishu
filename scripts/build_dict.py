@@ -6,6 +6,7 @@
   data-src/n1.csv … n5.csv       jamsinclair/open-anki-jlpt-decks（MIT）JLPT 等级
   data-src/zh-extra.tsv          本项目补译的中文释义（词\t读音\t释义[\t词性]），也可新增词条
 
+另输出 public/dict/kanji.json（汉字详情页，按需加载）。
 输出每条为数组：[词形, 其他写法(|分隔), 读音(平假名), 词性, JLPT(0-5, 0=无), 中文释义, 英文释义]
 用法：python3 scripts/build_dict.py [--missing 输出缺中文释义的词表路径]
 """
@@ -220,6 +221,16 @@ def main():
     have = sum(1 for x in out if x[5])
     print(f"entries={len(out)} zh={have} missing={len(missing)} "
           f"jlpt_missing={sum(1 for e in missing if e['jlpt'])} -> {OUT} ({os.path.getsize(OUT)//1024} KB)")
+
+    # 汉字详情页用：常用汉字的英文意思、音训读、笔画、年级、JLPT、笔顺路径（KanjiVG）
+    kanji = {}
+    for k in json.load(open(os.path.join(SRC, "kotobako-static.json"), encoding="utf-8"))["datasets"]["kanji"]:
+        kanji[k["char"]] = [k["meanings"], k["onyomi"], k["kunyomi"], k["strokeCount"], k["grade"] or 0,
+                            int(k["jlpt"][1]) if k.get("jlpt") else 0, k["strokes"]]
+    kout = os.path.join(os.path.dirname(OUT), "kanji.json")
+    with open(kout, "w", encoding="utf-8") as f:
+        json.dump(kanji, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"kanji={len(kanji)} -> {kout} ({os.path.getsize(kout)//1024} KB)")
 
     if args.missing:
         missing.sort(key=lambda e: (-(e["jlpt"] or 0), e["reading"]))

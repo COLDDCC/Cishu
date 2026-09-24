@@ -59,15 +59,17 @@
   <div class="row"><p id="status" class="status"></p></div>
 
   <main class="row">
+    <section id="kanjiView" class="kanji-view" hidden></section>
     <section id="sentence" class="zen" lang="ja" hidden></section>
 
-    <div class="columns">
+    <div class="columns" id="mainColumns">
       <div id="primary" class="primary">
         <h4 id="summary" class="block-title" hidden></h4>
         <section id="results" class="results"></section>
       </div>
 
       <aside id="toolbar" class="secondary" hidden>
+        <div class="side-block" id="kanjiSide" hidden></div>
         <div class="side-block">
           <h4 class="block-title">筛选</h4>
           <label class="side-row">排序
@@ -119,12 +121,14 @@
       <p>
         中文释义：<a href="https://github.com/lxl66566/Japanese-Chinese-thesaurus">Japanese-Chinese-thesaurus</a>（Unlicense）及本项目补译。
         JLPT 等级：<a href="https://github.com/jamsinclair/open-anki-jlpt-decks">open-anki-jlpt-decks</a>（MIT），非官方，仅供参考。
+        汉字数据：<a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project">KANJIDIC2</a>（CC BY-SA 4.0，EDRDG）；笔顺：<a href="https://kanjivg.tagaini.net">KanjiVG</a>（© Ulrich Apel，CC BY-SA 3.0）。
       </p>
     </div>
   </footer>
 
   <script src="vendor/kuromoji.js"></script>
   <script src="js/analyzer.js"></script>
+  <script src="js/kanji.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

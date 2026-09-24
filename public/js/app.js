@@ -155,7 +155,7 @@
     const has = !!(result && result.words.length);
     el.toolbar.hidden = !has;
     el.summary.hidden = !has;
-    el.sentence.hidden = !has;
+    el.sentence.hidden = !has || location.hash.startsWith("#kanji/");
     if (!has) {
       el.results.innerHTML = result ? `<p class="empty">没有找到日语词。</p>` : "";
       return;
@@ -215,6 +215,7 @@
           <div class="status">
             ${tags.join(" ")}
             <a href="#" class="status-link know" data-id="${esc(knownId(w))}">${isKnown ? "撤销认识" : "✓ 认识"}</a>
+            ${KanjiPage.kanjiOf(w.word).length ? `<span class="status-link">汉字详情：${KanjiPage.kanjiOf(w.word).map((c) => `<a lang="ja" href="${KanjiPage.link(c)}">${esc(c)}</a>`).join(" ")}</span>` : ""}
             <a class="status-link" href="https://www.weblio.jp/content/${encodeURIComponent(w.word)}" target="_blank" rel="noopener">Weblio</a>
           </div>
         </div>
@@ -248,7 +249,36 @@
     el.results.querySelectorAll(".concept.current").forEach((x) => x.classList.remove("current"));
     const target = document.getElementById("w-" + encodeURIComponent(a.dataset.key));
     if (target) target.classList.add("current");
+    showKanjiSide(a.textContent);
   });
+
+  // ---------- 汉字：侧栏小卡片 + 详情页（#kanji/字） ----------
+  const kanjiSide = $("kanjiSide"), kanjiView = $("kanjiView"), mainColumns = $("mainColumns");
+  function showKanjiSide(text) {
+    const chars = KanjiPage.kanjiOf(text.replace(/[\u3040-\u309f]/g, ""));
+    if (!chars.length) { kanjiSide.hidden = true; return; }
+    KanjiPage.load().then((data) => {
+      kanjiSide.innerHTML = `<h4 class="block-title">汉字<span class="result-count"> — ${chars.length} 个</span></h4>` +
+        chars.map((c) => KanjiPage.lightHtml(c, data[c]) || `<p class="minor">「${esc(c)}」不在常用汉字表里。</p>`).join("");
+      kanjiSide.hidden = false;
+    }).catch(() => (kanjiSide.hidden = true));
+  }
+  function route() {
+    const m = location.hash.match(/^#kanji\/([^/]+)(?:\/(start|end))?$/);
+    const inKanji = !!m;
+    kanjiView.hidden = !inKanji;
+    mainColumns.hidden = inKanji;
+    el.sentence.hidden = inKanji || !(result && result.words.length);
+    if (!inKanji) return;
+    const c = decodeURIComponent(m[1]);
+    kanjiView.innerHTML = `<p class="minor">正在加载汉字数据…</p>`;
+    window.scrollTo(0, 0);
+    Promise.all([KanjiPage.load(), dictP.catch(() => null)]).then(([data, rows]) => {
+      KanjiPage.render(kanjiView, c, data[c], rows, m[2] || "");
+    }).catch((e) => (kanjiView.innerHTML = `<p class="empty">${esc(e.message || e)}</p>`));
+  }
+  window.addEventListener("hashchange", route);
+  route();
 
   // ---------- 导出 ----------
   function exportRows() {

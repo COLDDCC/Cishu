@@ -39,7 +39,9 @@ public/                 网站本体
   css/style.css
   js/analyzer.js        分词结果 → 去重词表、查词、振假名对齐（浏览器和 Node 共用）
   js/app.js             页面交互：按钮、筛选、导出
-  dict/dict.json        预先生成的中文词典（约 2.4 MB，传输时 gzip 后更小）
+  dict/dict.json        预先生成的中文词典（约 2.5 MB，传输时 gzip 后更小）
+  dict/kanji.json       常用汉字 2136 个及笔顺（约 2 MB，打开汉字页时才加载）
+  js/kanji.js           汉字详情页（#kanji/字）和侧栏汉字卡片
   vendor/               kuromoji.js 及其 IPADIC 词典
 scripts/
   build_dict.py         合并各数据源 → public/dict/dict.json
@@ -68,6 +70,8 @@ npm test                    # 看看分词和释义对不对
 | 词条、读音、词性、英文释义 | [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) 常用词子集，经 npm 包 `kotobako-data` | CC BY-SA 4.0（EDRDG） |
 | 中文释义 | [lxl66566/Japanese-Chinese-thesaurus](https://github.com/lxl66566/Japanese-Chinese-thesaurus) | Unlicense（公有领域） |
 | 中文释义（补充） | 本项目补译，`data-src/zh-extra.tsv` | 随 `dict.json` 按 CC BY-SA 4.0 发布 |
+| 汉字详情（意思、音训读、笔画、年级） | KANJIDIC2，经 npm 包 `kotobako-data` | CC BY-SA 4.0（EDRDG） |
+| 笔顺 | [KanjiVG](https://kanjivg.tagaini.net)，© Ulrich Apel | CC BY-SA 3.0 |
 | JLPT 等级 | [jamsinclair/open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) | MIT；JLPT 官方已不公布词表，等级仅供参考 |
 
 由于 `public/dict/dict.json` 含 JMdict 数据，该文件按 CC BY-SA 4.0 发布；其余代码 MIT。
