@@ -90,6 +90,13 @@ def split_forms(expr):
     return [f.strip() for f in re.split(r"[;；,、]", expr) if f.strip() and not re.search(r"[～〜]", f)]
 
 
+def strip_suru(form, reading):
+    """「生活」配「せいかつする」：读音多了する，去掉以便和原词条合并（刷る/擦る 这种本身以る结尾的不动）。"""
+    if reading.endswith("する") and len(reading) > 2 and not kata_to_hira(form).endswith("る"):
+        return reading[:-2]
+    return reading
+
+
 # JLPT 词表源文件里的个别错误：(错误写法, 读音) → 正确写法
 JLPT_FIX = {("副", "とりわけ"): ["取り分け", "とりわけ"]}
 
@@ -103,6 +110,7 @@ def load_jlpt():
             for row in csv.DictReader(f):
                 forms = split_forms(row["expression"])
                 readings = [kata_to_hira(r) for r in split_forms(row["reading"])]
+                readings = [strip_suru(forms[0], r) for r in readings] if forms else readings
                 if forms and readings and (forms[0], readings[0]) in JLPT_FIX:
                     forms = JLPT_FIX[(forms[0], readings[0])]
                 if not forms:
@@ -130,6 +138,8 @@ def load_extra_zh():
                 continue
             forms = [f for fm in parts[0].split("|") for f in (split_forms(fm) or [fm.strip()]) if f]
             reading = kata_to_hira((split_forms(parts[1]) or [parts[1].strip()])[0])
+            if forms:
+                reading = strip_suru(forms[0], reading)
             for fm in forms:
                 out[(fm, reading)] = parts[2].strip()
             rows.append((forms, reading, parts[2].strip(), parts[3].strip() if len(parts) > 3 else ""))

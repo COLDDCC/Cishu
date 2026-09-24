@@ -81,12 +81,27 @@
   }
 
   // ---------- 含这个字的词（从我们自己的词典里找） ----------
+  // 音读在词里常发生浊化（しょう→じょう：誕生日）和促音化（がく→がっ：学校），一并算作音读
+  const VOICED = { か: "が", き: "ぎ", く: "ぐ", け: "げ", こ: "ご", さ: "ざ", し: "じ", す: "ず", せ: "ぜ", そ: "ぞ",
+    た: "だ", ち: "ぢ", つ: "づ", て: "で", と: "ど", は: "ば", ひ: "び", ふ: "ぶ", へ: "べ", ほ: "ぼ" };
+  const HANDAKU = { は: "ぱ", ひ: "ぴ", ふ: "ぷ", へ: "ぺ", ほ: "ぽ" };
+  function onVariants(on) {
+    const out = new Set([on]);
+    for (const v of [...out]) {
+      if (VOICED[v[0]]) out.add(VOICED[v[0]] + v.slice(1));
+      if (HANDAKU[v[0]]) out.add(HANDAKU[v[0]] + v.slice(1));
+    }
+    for (const v of [...out]) if (v.length > 1 && "つくちき".includes(v[v.length - 1])) out.add(v.slice(0, -1) + "っ");
+    return [...out];
+  }
+
   function compounds(c, k, rows, mode) {
-    const onH = k[1].map(kataToHira);
+    const onH = k[1].map(kataToHira).flatMap(onVariants);
     const out = { on: [], kun: [] };
     for (const r of rows) {
-      const forms = [r[0]].concat(r[1] ? r[1].split("|") : []);
-      const w = forms.find((f) => f.includes(c));
+      // 跳过后缀条目（～日）和全角数字写法（５日）
+      // 只看主写法：其他写法的读音可能对不上（高校/高等学校 共用「こうこう」）
+      const w = r[0].includes(c) && !/[～〜０-９0-9]/.test(r[0]) ? r[0] : null;
       if (!w || !r[5]) continue;
       if (mode === "start" && !w.startsWith(c)) continue;
       if (mode === "end" && !w.endsWith(c)) continue;
