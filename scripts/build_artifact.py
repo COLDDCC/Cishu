@@ -1,7 +1,7 @@
 """把 public/index.html 转成 claude.ai Artifact 用的页面（发布时平台会自己包一层 <html><head><body>）。
 
-Artifact 里浏览器不允许下载文件、也读不了剪贴板，所以隐藏「下载 CSV/TXT」和「粘贴」按钮
-（导出对话框里的「复制」「复制 CSV」照常可用，输入框里直接 Ctrl+V 也照常可用）。
+Artifact 里读不了剪贴板，所以隐藏「粘贴」按钮（输入框里直接 Ctrl+V 照常可用）。
+下载文件走 downloads 能力（发布时声明 capabilities: {downloads: true}），页面代码会自动选择。
 输出：artifact/index.html 和 artifact/kuromoji-dict/*.b64.txt（其余文件直接用 public/ 下的原文件发布）
 """
 import os
@@ -18,7 +18,7 @@ head = head.replace(title, "")
 
 body = body.replace('<a href="./">', '<a href="#">')
 out = title + "\n" + head.strip() + """
-<style>#downloadCsv, #downloadTxt, #pasteBtn { display: none !important; }</style>
+<style>#pasteBtn { display: none !important; }</style>
 <script>self.CISHU_DICT_SUFFIX = ".b64.txt";</script>
 """ + body.strip() + "\n"
 

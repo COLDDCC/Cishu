@@ -8,7 +8,6 @@
     showKnown: $("showKnown"), exportBtn: $("export"), summary: $("summary"),
     sentence: $("sentence"), results: $("results"), dialog: $("exportDialog"),
     exportText: $("exportText"), copyExport: $("copyExport"),
-    downloadCsv: $("downloadCsv"), downloadTxt: $("downloadTxt"),
   };
 
   // ---------- 本地存储（读写都可能失败，失败就当没有） ----------
@@ -29,9 +28,12 @@
   if (prefs.sort) el.sort.value = prefs.sort;
   if (prefs.furigana === false) el.furigana.checked = false;
   if (prefs.showKnown) el.showKnown.checked = true;
+  // 显示方式：list = 全部列出；focus = 一次只看一个词（Jisho 的做法：点原文里的词，下面只显示那一个）
+  let viewMode = prefs.view === "focus" ? "focus" : "list";
+  let focusKey = null;
   const savePrefs = () => store.set("cishu.prefs", {
     level: el.level.value, sort: el.sort.value,
-    furigana: el.furigana.checked, showKnown: el.showKnown.checked,
+    furigana: el.furigana.checked, showKnown: el.showKnown.checked, view: viewMode,
   });
   el.input.value = store.get("cishu.draft", "");
 
@@ -95,6 +97,7 @@
       return;
     }
     result = Analyzer.analyze(text, tokenizer, dict);
+    focusKey = null;
     if (location.hash.startsWith("#kanji/")) location.hash = ""; // 在汉字页里分析：回到生词表
     render();
     // 单行框里回到开头显示（Jisho 也是从第一句开始显示）
@@ -202,7 +205,20 @@
       return `<li class="${cls}"><a href="#w-${encodeURIComponent(s.key)}" data-key="${esc(s.key)}">${inner}</a></li>`;
     }).join("") + "</ul>").join("");
 
-    el.results.innerHTML = ws.map(wordHtml).join("");
+    if (viewMode === "focus" && ws.length) {
+      let i = ws.findIndex((w) => w.key === focusKey);
+      if (i < 0) i = 0;
+      focusKey = ws[i].key;
+      el.results.innerHTML = `
+        <nav class="focus-nav" aria-label="逐词浏览">
+          <button type="button" class="button secondary-btn" data-step="-1" ${i === 0 ? "disabled" : ""}>‹ 上一个</button>
+          <span class="focus-pos"><b>${i + 1}</b> / ${ws.length}</span>
+          <button type="button" class="button secondary-btn" data-step="1" ${i === ws.length - 1 ? "disabled" : ""}>下一个 ›</button>
+        </nav>` + wordHtml(ws[i]).replace('class="concept', 'class="concept focus');
+      el.sentence.querySelectorAll("a[data-key]").forEach((a) => a.classList.toggle("current", a.dataset.key === focusKey));
+    } else {
+      el.results.innerHTML = ws.map(wordHtml).join("");
+    }
     updateZenToggle();
   }
 
@@ -264,16 +280,55 @@
     if (!b) return;
     e.preventDefault();
     const id = b.dataset.id;
+    if (viewMode === "focus" && !known.has(id) && !el.showKnown.checked) {
+      // 逐词模式里勾掉当前词：自动跳到下一个
+      const ws = visibleWords(), i = ws.findIndex((w) => w.key === focusKey);
+      const next = ws[i + 1] || ws[i - 1];
+      focusKey = next ? next.key : null;
+    }
     if (known.has(id)) known.delete(id);
     else known.add(id);
     saveKnown();
     render();
   });
 
-  // 点原文里的词：跳到词条并高亮（Jisho 的 current）
+  function stepFocus(d) {
+    const ws = visibleWords(), i = ws.findIndex((w) => w.key === focusKey);
+    const next = ws[Math.min(ws.length - 1, Math.max(0, i + d))];
+    if (next && next.key !== focusKey) { focusKey = next.key; render(); showKanjiSide(next.word); }
+  }
+  el.results.addEventListener("click", (e) => {
+    const b = e.target.closest(".focus-nav button[data-step]");
+    if (b) stepFocus(+b.dataset.step);
+  });
+  // 逐词模式：键盘左右键切换（在输入框里打字时不管）
+  document.addEventListener("keydown", (e) => {
+    if (viewMode !== "focus" || !result || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || el.dialog.open) return;
+    if (e.key === "ArrowRight") { stepFocus(1); e.preventDefault(); }
+    if (e.key === "ArrowLeft") { stepFocus(-1); e.preventDefault(); }
+  });
+
+  const viewBtns = [...document.querySelectorAll("#viewSwitch button")];
+  function applyView(v) {
+    viewMode = v;
+    viewBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+  }
+  applyView(viewMode);
+  viewBtns.forEach((b) => b.addEventListener("click", () => { applyView(b.dataset.view); savePrefs(); render(); }));
+
+  // 点原文里的词：跳到词条并高亮（Jisho 的 current）；逐词模式下直接换成这个词
   el.sentence.addEventListener("click", (e) => {
     const a = e.target.closest("a[data-key]");
     if (!a) return;
+    if (viewMode === "focus") {
+      e.preventDefault();
+      if (!visibleWords().some((w) => w.key === a.dataset.key)) return; // 被筛掉或已认识的词
+      focusKey = a.dataset.key;
+      render();
+      showKanjiSide(a.textContent);
+      return;
+    }
     el.sentence.querySelectorAll("a.current").forEach((x) => x.classList.remove("current"));
     el.sentence.querySelectorAll(`a[data-key="${CSS.escape(a.dataset.key)}"]`).forEach((x) => x.classList.add("current"));
     el.results.querySelectorAll(".concept.current").forEach((x) => x.classList.remove("current"));
@@ -317,46 +372,77 @@
     return visibleWords().map((w) => ({
       word: w.word, reading: w.reading, pos: w.pos,
       jlpt: w.jlpt ? "N" + w.jlpt : "", meaning: w.zh || w.en || "", count: w.count,
+      forms: w.otherForms.join("、"), surfaces: w.surfaces.filter((x) => x !== w.word).join("、"),
     }));
   }
+  const HEAD = ["词", "读音", "词性", "JLPT", "释义", "出现次数", "其他写法", "原文写作"];
+  const asRow = (r) => [r.word, r.reading, r.pos, r.jlpt, r.meaning, r.count, r.forms, r.surfaces];
   const csvCell = (s) => /[",\n]/.test(String(s)) ? `"${String(s).replace(/"/g, '""')}"` : String(s);
-  function toCsv(rows) {
-    const head = ["词", "读音", "词性", "JLPT", "释义", "出现次数"];
-    return [head].concat(rows.map((r) => [r.word, r.reading, r.pos, r.jlpt, r.meaning, r.count]))
-      .map((r) => r.map(csvCell).join(",")).join("\r\n");
-  }
+  const toCsv = (rows) => [HEAD].concat(rows.map(asRow)).map((r) => r.map(csvCell).join(",")).join("\r\n");
   const toTxt = (rows) => rows.map((r) => `${r.word}【${r.reading}】${r.jlpt ? " " + r.jlpt : ""}　${r.meaning}`).join("\n");
+  // Anki 2.1.55+ 认得这几行文件头：正面「词＋读音」，背面「释义」，第三列当标签
+  const tabSafe = (s) => String(s).replace(/[\t\n]/g, " ");
+  const toAnki = (rows) => "#separator:tab\n#html:false\n#tags column:4\n" +
+    rows.map((r) => [r.word, r.reading, r.meaning + (r.pos ? `（${r.pos}）` : ""), r.jlpt ? "JLPT_" + r.jlpt : ""].map(tabSafe).join("\t")).join("\n");
+  const toXlsx = (rows) => Xlsx.make([HEAD].concat(rows.map(asRow)), { sheetName: "生词表", widths: [14, 16, 18, 7, 48, 9, 16, 16] });
+  const stamp = () => new Date().toISOString().slice(0, 10);
 
-  function download(name, text, type) {
-    const blob = new Blob(["﻿" + text], { type });
+  // 在 claude.ai 里打开时，页面不能自己下载文件，要走平台的保存确认；其他地方就用浏览器下载
+  let platformDl = null;
+  const getPlatformDownloads = () => (platformDl = platformDl ||
+    (window.claude && typeof window.claude.use === "function" ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null)));
+  getPlatformDownloads();
+
+  const exportStatus = $("exportStatus");
+  async function saveFile(name, data, mime) {
+    exportStatus.textContent = "";
+    const dl = await getPlatformDownloads();
+    if (dl) {
+      try {
+        await dl.save({ filename: name, data });
+        exportStatus.textContent = `已保存：${name}`;
+      } catch (e) {
+        const code = e && e.code;
+        if (code === "declined") exportStatus.textContent = "已取消保存。";
+        else if (code === "rate_limited") exportStatus.textContent = "上一个保存确认还没关闭，稍等一下再试。";
+        else exportStatus.textContent = "这里暂时不能保存文件，可以展开「预览 / 复制文字」复制后粘贴。";
+      }
+      return;
+    }
+    const blob = new Blob([data], { type: mime });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = name;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    exportStatus.textContent = `已下载：${name}`;
   }
-  const stamp = () => new Date().toISOString().slice(0, 10);
+
+  // 文件名用英文：部分浏览器会丢掉「中文名 + .xlsx」的文件名，只剩 download
+  const FORMATS = {
+    xlsx: () => [`Cishu-${stamp()}.xlsx`, toXlsx(exportRows()), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    csv: () => [`Cishu-${stamp()}.csv`, "\ufeff" + toCsv(exportRows()), "text/csv;charset=utf-8"],
+    anki: () => [`Cishu-Anki-${stamp()}.txt`, toAnki(exportRows()), "text/plain;charset=utf-8"],
+    txt: () => [`Cishu-${stamp()}.txt`, toTxt(exportRows()), "text/plain;charset=utf-8"],
+  };
+  document.querySelectorAll(".export-format").forEach((b) =>
+    b.addEventListener("click", () => saveFile(...FORMATS[b.dataset.format]())));
 
   el.exportBtn.addEventListener("click", () => {
-    el.exportText.value = toTxt(exportRows());
+    const rows = exportRows();
+    $("exportCount").textContent = rows.length;
+    el.exportText.value = toTxt(rows);
+    exportStatus.textContent = "";
     if (el.dialog.showModal) el.dialog.showModal();
     else el.dialog.setAttribute("open", "");
   });
-  el.copyExport.addEventListener("click", () => {
-    const done = () => { el.copyExport.textContent = "已复制"; setTimeout(() => (el.copyExport.textContent = "复制"), 1500); };
-    if (navigator.clipboard) navigator.clipboard.writeText(el.exportText.value).then(done, () => { el.exportText.select(); document.execCommand("copy"); done(); });
-    else { el.exportText.select(); document.execCommand("copy"); done(); }
-  });
-  // 复制 CSV：不能下载文件的环境里（比如嵌在别的页面中）也能粘进 Excel
-  $("copyCsv").addEventListener("click", (e) => {
-    const btn = e.currentTarget;
-    const text = toCsv(exportRows());
-    const done = () => { btn.textContent = "已复制"; setTimeout(() => (btn.textContent = "复制 CSV"), 1500); };
+  function copyText(btn, text, label) {
+    const done = () => { btn.textContent = "已复制"; setTimeout(() => (btn.textContent = label), 1500); };
     const fallback = () => { el.exportText.value = text; el.exportText.select(); document.execCommand("copy"); done(); };
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, fallback);
     else fallback();
-  });
-  el.downloadCsv.addEventListener("click", () => download(`生词表-${stamp()}.csv`, toCsv(exportRows()), "text/csv;charset=utf-8"));
-  el.downloadTxt.addEventListener("click", () => download(`生词表-${stamp()}.txt`, toTxt(exportRows()), "text/plain;charset=utf-8"));
+  }
+  el.copyExport.addEventListener("click", () => copyText(el.copyExport, toTxt(exportRows()), "复制"));
+  $("copyCsv").addEventListener("click", (e) => copyText(e.currentTarget, toCsv(exportRows()), "复制 CSV"));
 })();

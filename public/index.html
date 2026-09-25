@@ -73,6 +73,12 @@
         <div class="side-block" id="kanjiSide" hidden></div>
         <div class="side-block">
           <h4 class="block-title">筛选</h4>
+          <div class="side-row">显示方式
+            <span class="size-switch" id="viewSwitch" role="group" aria-label="显示方式">
+              <button type="button" data-view="list" aria-pressed="false" title="所有词一次列出">列表</button>
+              <button type="button" data-view="focus" aria-pressed="false" title="一次只看一个词（像 Jisho）">逐词</button>
+            </span>
+          </div>
           <div class="side-row">字号
             <span class="size-switch" id="sizeSwitch" role="group" aria-label="字号">
               <button type="button" data-size="s" aria-pressed="false">小</button>
@@ -105,13 +111,23 @@
     <dialog id="exportDialog">
       <form method="dialog">
         <h2>导出生词表</h2>
-        <p class="minor">导出当前列表里显示的词（已应用等级筛选，不含勾掉的认识词）。</p>
-        <textarea id="exportText" rows="12" readonly></textarea>
+        <p class="minor">导出当前列表里显示的词（已应用等级筛选，不含勾掉的认识词），共 <b id="exportCount">0</b> 个。</p>
+        <div class="export-formats">
+          <button type="button" class="export-format" data-format="xlsx"><b>Excel</b><span>.xlsx，直接用 Excel / Numbers / WPS 打开</span></button>
+          <button type="button" class="export-format" data-format="csv"><b>CSV</b><span>通用表格格式，各种软件都能导入</span></button>
+          <button type="button" class="export-format" data-format="anki"><b>Anki</b><span>.txt，Anki「导入文件」即可做成卡片</span></button>
+          <button type="button" class="export-format" data-format="txt"><b>纯文本</b><span>.txt，一行一个词，方便打印或贴到笔记里</span></button>
+        </div>
+        <p class="export-status" id="exportStatus" role="status"></p>
+        <details class="export-preview">
+          <summary>预览 / 复制文字</summary>
+          <textarea id="exportText" rows="10" readonly></textarea>
+          <div class="dialog-actions">
+            <button type="button" id="copyExport" class="button secondary-btn">复制</button>
+            <button type="button" id="copyCsv" class="button secondary-btn">复制 CSV</button>
+          </div>
+        </details>
         <div class="dialog-actions">
-          <button type="button" id="copyExport" class="button secondary-btn">复制</button>
-          <button type="button" id="copyCsv" class="button secondary-btn">复制 CSV</button>
-          <button type="button" id="downloadCsv" class="button secondary-btn">下载 CSV（Excel / Anki）</button>
-          <button type="button" id="downloadTxt" class="button secondary-btn">下载 TXT</button>
           <span class="spacer"></span>
           <button value="close" class="button">关闭</button>
         </div>
@@ -138,6 +154,7 @@
   <script src="vendor/kuromoji.js"></script>
   <script src="js/analyzer.js"></script>
   <script src="js/kanji.js"></script>
+  <script src="js/xlsx.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

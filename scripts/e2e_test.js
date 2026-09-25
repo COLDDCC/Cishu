@@ -77,6 +77,26 @@ const ok = (cond, name, extra = "") => {
   ok((await heads())[0] === "猫", "按出现次数排序：猫排第一", (await heads()).join(" "));
   await page.selectOption("#sort", "order");
 
+  // 逐词模式（Jisho 式：一次一个词）
+  await analyze("猫が好きです。毎日公園で犬と遊びます。");
+  const listCount = await count(".concept");
+  await page.click("#viewSwitch button[data-view=focus]");
+  ok(await count(".concept") === 1 && (await page.innerText(".focus-pos")).includes("1 / " + listCount), "逐词模式：只显示 1 个词", await page.innerText(".focus-pos"));
+  await page.click(".focus-nav button[data-step='1']");
+  ok((await page.innerText(".focus-pos")).startsWith("2"), "「下一个」按钮");
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("ArrowRight");
+  ok((await page.innerText(".focus-pos")).startsWith("3"), "键盘右方向键");
+  await page.locator("#sentence a[data-key]").first().click();
+  ok((await page.innerText(".focus-pos")).startsWith("1") && await page.evaluate(() => location.hash === ""), "点原文里的词：切换到那个词（不跳走）");
+  await page.locator(".concept.focus .know").click();
+  ok(await count(".concept") === 1 && (await page.innerText(".focus-pos")).includes("/ " + (listCount - 1)), "逐词模式里勾掉认识的词：自动显示下一个");
+  await page.click("#viewSwitch button[data-view=list]");
+  await page.check("#showKnown");
+  await page.locator(".concept.known .know").click();
+  await page.uncheck("#showKnown");
+  ok(await count(".concept") === listCount, "切回列表模式（撤销刚才的认识）");
+
   // 振假名
   await page.uncheck("#furigana");
   ok(await page.evaluate(() => document.body.classList.contains("no-furigana")), "隐藏振假名");
@@ -89,10 +109,15 @@ const ok = (cond, name, extra = "") => {
   ok(await page.locator("#exportDialog").evaluate((d) => d.open), "导出对话框打开");
   const txt = await page.inputValue("#exportText");
   ok(txt.split("\n").length === await count(".concept"), "导出行数 = 词条数");
-  const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#downloadCsv")]);
-  const csvPath = await dl.path();
-  const csv = fs.readFileSync(csvPath, "utf8");
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.click(".export-format[data-format=csv]")]);
+  const csv = fs.readFileSync(await dl.path(), "utf8");
   ok(csv.charCodeAt(0) === 0xfeff && csv.includes("词,读音,词性,JLPT,释义,出现次数"), "CSV 带 BOM 和表头");
+  const [dx] = await Promise.all([page.waitForEvent("download"), page.click(".export-format[data-format=xlsx]")]);
+  const xlsx = fs.readFileSync(await dx.path());
+  ok(dx.suggestedFilename().endsWith(".xlsx") && xlsx[0] === 0x50 && xlsx[1] === 0x4b, "下载 Excel（.xlsx 文件）", dx.suggestedFilename());
+  const [da] = await Promise.all([page.waitForEvent("download"), page.click(".export-format[data-format=anki]")]);
+  const anki = fs.readFileSync(await da.path(), "utf8");
+  ok(anki.startsWith("#separator:tab") && anki.split("\n").length === 3 + await count(".concept"), "下载 Anki 导入文件");
   await page.click("#exportDialog button[value=close]");
 
   // 例文、文件（UTF-8 BOM / Shift-JIS）

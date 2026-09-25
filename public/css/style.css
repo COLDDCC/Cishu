@@ -201,6 +201,16 @@ rt { font-size: 0.75rem; color: var(--muted); }
 .details-link { position: absolute; right: 0; bottom: 8px; font-size: 0.8125rem; color: var(--muted); }
 .details-link:hover { color: var(--soft); }
 
+/* 逐词模式：一次一个词，字放大（Jisho 的单词页） */
+.focus-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 0 0.2rem; }
+.focus-nav .button:disabled { opacity: 0.4; cursor: default; }
+.focus-pos { color: var(--muted); font-variant-numeric: tabular-nums; }
+.focus-pos b { color: var(--fg); }
+.concept.focus { grid-template-columns: 30% 1fr; padding-top: 1.6rem; border-bottom: 0; }
+.concept.focus .representation { font-size: 3.6rem; }
+.concept.focus .representation rt { font-size: 1.1rem; }
+.concept.focus .meaning { font-size: 1.6rem; }
+.concept.focus .meaning-tags { font-size: 1rem; }
 .concept.known .representation, .concept.known .meaning-text { color: var(--known); }
 
 .empty { color: var(--muted); padding: 20px 0; }
@@ -278,6 +288,13 @@ rt { font-size: 0.75rem; color: var(--muted); }
 .size-switch button:nth-child(3) { font-size: 1.15rem; }
 
 /* ---------- 导出对话框 ---------- */
+.export-formats { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.6rem; margin: 0.9rem 0 0.4rem; }
+.export-format { display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; text-align: left; padding: 0.7rem 0.9rem; border: 1px solid var(--box); border-radius: 5px; background: var(--field); color: var(--fg); cursor: pointer; }
+.export-format b { font-size: 1.05rem; color: var(--accent); }
+.export-format span { font-size: 0.85rem; color: var(--muted); }
+.export-format:hover, .export-format:focus-visible { border-color: var(--accent); }
+.export-status { min-height: 1.3em; margin: 0.3rem 0; font-size: 0.9rem; color: var(--soft); }
+.export-preview summary { cursor: pointer; color: var(--link); font-size: 0.9rem; margin: 0.4rem 0; }
 dialog {
   width: min(640px, calc(100vw - 32px));
   border: 1px solid var(--line);
