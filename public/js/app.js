@@ -336,6 +336,15 @@
     if (navigator.clipboard) navigator.clipboard.writeText(el.exportText.value).then(done, () => { el.exportText.select(); document.execCommand("copy"); done(); });
     else { el.exportText.select(); document.execCommand("copy"); done(); }
   });
+  // 复制 CSV：不能下载文件的环境里（比如嵌在别的页面中）也能粘进 Excel
+  $("copyCsv").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    const text = toCsv(exportRows());
+    const done = () => { btn.textContent = "已复制"; setTimeout(() => (btn.textContent = "复制 CSV"), 1500); };
+    const fallback = () => { el.exportText.value = text; el.exportText.select(); document.execCommand("copy"); done(); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  });
   el.downloadCsv.addEventListener("click", () => download(`生词表-${stamp()}.csv`, toCsv(exportRows()), "text/csv;charset=utf-8"));
   el.downloadTxt.addEventListener("click", () => download(`生词表-${stamp()}.txt`, toTxt(exportRows()), "text/plain;charset=utf-8"));
 })();

@@ -14,9 +14,12 @@
   --footer: #f7f7f7;
   --field: #fff;
   --known: #c4c4c4;
+  --logo: #5a5a5a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --logo: #cfcfcf;
     --bg: #1c1d1f;
     --fg: #dedede;
     --muted: #8a8a8a;
@@ -34,6 +37,8 @@
   }
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
+  --logo: #cfcfcf;
   --bg: #1c1d1f;
   --fg: #dedede;
   --muted: #8a8a8a;
@@ -71,10 +76,8 @@ a:hover { text-decoration: underline; }
 /* ---------- 顶部 ---------- */
 .site-header { display: flex; align-items: flex-start; justify-content: space-between; padding-top: 14px; padding-bottom: 6px; }
 .logo { margin: 0; font-size: 64px; line-height: 1; font-weight: 800; letter-spacing: -.02em; }
-.logo a { position: relative; display: inline-block; color: #5a5a5a; text-decoration: none; padding-top: 22px; }
+.logo a { position: relative; display: inline-block; color: var(--logo); text-decoration: none; padding-top: 22px; }
 .logo .seal { position: absolute; left: 4px; top: 2px; width: 16px; height: 16px; border-radius: 3px; background: var(--accent); }
-:root[data-theme="dark"] .logo a { color: #cfcfcf; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .logo a { color: #cfcfcf; } }
 .nav { display: flex; gap: 28px; padding-top: 8px; }
 .nav a, .nav-btn { color: var(--link); font-size: 20px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .nav-btn { border: 0; padding: 0; background: none; font-family: inherit; }

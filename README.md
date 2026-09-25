@@ -23,6 +23,11 @@ Jisho 的中文版：粘贴任意日文（小说、吐槽、歌词、新闻都�
 | 导出生词表 | 右侧栏 | 导出当前显示的词（已应用筛选、不含认识的词），可复制、下载 CSV（Excel／Anki 可直接导入，带 BOM）或 TXT。 |
 | 主题 | 右上角 | 自动（跟随系统）→ 浅色 → 深色，会记住。 |
 
+## 在线使用
+
+已发布为 claude.ai 网页：https://claude.ai/artifact/GLNmhuGtNmJt5iWuZiRuMh （默认只有自己能打开，可在页面的 Share 菜单里分享）。
+更新方式：`python3 scripts/build_artifact.py` 生成 `artifact/`，再由 Claude 重新发布。那里不能下载文件、不能读剪贴板，所以隐藏了「下载」和「粘贴」按钮，导出请用「复制」「复制 CSV」。
+
 ## 本地运行
 
 ```bash
