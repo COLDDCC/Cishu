@@ -51,6 +51,18 @@
     applyTheme(theme);
   });
 
+  // ---------- 字号：小 / 中 / 大（大 = 原来的尺寸），整页按比例缩放 ----------
+  const sizeBtns = [...document.querySelectorAll("#sizeSwitch button")];
+  function applySize(z) {
+    if (z === "m") delete document.documentElement.dataset.size;
+    else document.documentElement.dataset.size = z;
+    sizeBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === z)));
+    try { localStorage.setItem("cishu.size", z); } catch (e) { /* 忽略 */ }
+  }
+  applySize(document.documentElement.dataset.size || "m");
+  // 切换后原文区域高度变了，重新判断要不要显示「展开全文」
+  sizeBtns.forEach((b) => b.addEventListener("click", () => { applySize(b.dataset.size); updateZenToggle(); }));
+
   // ---------- 加载分词器和词典 ----------
   let tokenizer = null, dict = null, result = null;
 
