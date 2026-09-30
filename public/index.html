@@ -98,8 +98,9 @@
         </div>
         <div class="side-block">
           <h4 class="block-title">生词表</h4>
-          <p class="minor">导出当前显示的词（已按等级筛选，不含认识的词）。</p>
+          <p class="minor" id="sessionInfo">这次打开页面后分析过的文字，生词会累积在这里；关闭页面后清空。</p>
           <button type="button" id="export" class="button">导出生词表</button>
+          <button type="button" id="clearSession" class="link-btn" hidden>清空本次</button>
         </div>
         <div class="side-block tip">
           <h4 class="block-title">小提示</h4>
@@ -111,7 +112,13 @@
     <dialog id="exportDialog">
       <form method="dialog">
         <h2>导出生词表</h2>
-        <p class="minor">导出当前列表里显示的词（已应用等级筛选，不含勾掉的认识词），共 <b id="exportCount">0</b> 个。</p>
+        <div class="side-row export-range">导出范围
+          <span class="size-switch" id="rangeSwitch" role="group" aria-label="导出范围">
+            <button type="button" data-range="session" aria-pressed="true">本次全部</button>
+            <button type="button" data-range="current" aria-pressed="false">当前文本</button>
+          </span>
+        </div>
+        <p class="minor"><span id="rangeNote"></span>已按等级筛选，不含勾掉的认识词，共 <b id="exportCount">0</b> 个。</p>
         <div class="export-formats">
           <button type="button" class="export-format" data-format="xlsx"><b>Excel</b><span>.xlsx，直接用 Excel / Numbers / WPS 打开</span></button>
           <button type="button" class="export-format" data-format="csv"><b>CSV</b><span>通用表格格式，各种软件都能导入</span></button>

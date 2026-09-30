@@ -293,6 +293,9 @@ rt { font-size: 0.75rem; color: var(--muted); }
 .export-format b { font-size: 1.05rem; color: var(--accent); }
 .export-format span { font-size: 0.85rem; color: var(--muted); }
 .export-format:hover, .export-format:focus-visible { border-color: var(--accent); }
+.export-range { margin-top: 0.6rem; }
+.link-btn { border: 0; background: none; padding: 0 0 0 0.8rem; color: var(--muted); font: inherit; font-size: 0.85rem; text-decoration: underline; cursor: pointer; }
+.link-btn:hover { color: var(--fg); }
 .export-status { min-height: 1.3em; margin: 0.3rem 0; font-size: 0.9rem; color: var(--soft); }
 .export-preview summary { cursor: pointer; color: var(--link); font-size: 0.9rem; margin: 0.4rem 0; }
 dialog {

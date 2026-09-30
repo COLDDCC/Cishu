@@ -107,6 +107,7 @@ const ok = (cond, name, extra = "") => {
   // 导出
   await page.click("#export");
   ok(await page.locator("#exportDialog").evaluate((d) => d.open), "导出对话框打开");
+  await page.click("#rangeSwitch button[data-range=current]");
   const txt = await page.inputValue("#exportText");
   ok(txt.split("\n").length === await count(".concept"), "导出行数 = 词条数");
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click(".export-format[data-format=csv]")]);
@@ -119,6 +120,28 @@ const ok = (cond, name, extra = "") => {
   const anki = fs.readFileSync(await da.path(), "utf8");
   ok(anki.startsWith("#separator:tab") && anki.split("\n").length === 3 + await count(".concept"), "下载 Anki 导入文件");
   await page.click("#exportDialog button[value=close]");
+
+  // 本次累积：分析过的所有文字的词都能一起导出，含例句；同一段文字重复分析不重复计数
+  await page.click("#clearSession").catch(() => {});
+  await analyze("猫が好きです。");
+  await analyze("犬も好きです。");
+  await analyze("犬も好きです。");
+  ok((await page.innerText("#sessionInfo")).includes("2 段文字"), "本次累积：两段文字（重复分析不计数）", await page.innerText("#sessionInfo"));
+  await page.click("#export");
+  await page.click("#rangeSwitch button[data-range=session]");
+  const sessTxt = await page.inputValue("#exportText");
+  ok(sessTxt.includes("猫") && sessTxt.includes("犬"), "导出「本次全部」包含前一段文字的词");
+  const [ds] = await Promise.all([page.waitForEvent("download"), page.click(".export-format[data-format=csv]")]);
+  const sessCsv = fs.readFileSync(await ds.path(), "utf8");
+  ok(sessCsv.includes("例句") && sessCsv.includes("猫が好きです。") && /好き,[^\n]*,2,/.test(sessCsv), "CSV 含例句，好き 出现次数累加为 2");
+  await page.click("#rangeSwitch button[data-range=current]");
+  ok(!(await page.inputValue("#exportText")).includes("猫"), "导出「当前文本」只含这一段");
+  await page.click("#exportDialog button[value=close]");
+  const ctx2 = await browser.newContext();
+  const p2 = await ctx2.newPage();
+  await p2.goto(BASE);
+  ok((await p2.innerText("#sessionInfo")).includes("关闭页面后清空") && !(await p2.innerText("#sessionInfo")).includes("段文字"), "新开浏览器：本次累积从头开始");
+  await ctx2.close();
 
   // 例文、文件（UTF-8 BOM / Shift-JIS）
   await page.click("#sampleBtn");

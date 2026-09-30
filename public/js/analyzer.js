@@ -143,10 +143,20 @@
     const tokens = mergeTokens(tokenizer.tokenize(text), dict);
     const words = new Map();
     const segs = [];
+    // 按句号、问号、感叹号和换行切句子，记下每个词第一次出现在哪一句（导出时当例句）
+    const sentences = [""];
+    let sid = 0;
 
     for (const t of tokens) {
       const seg = { surface: t.surface_form, reading: t.reading ? kataToHira(t.reading) : "", key: null };
       segs.push(seg);
+      const parts = t.surface_form.split("\n");
+      parts.forEach((p, i) => {
+        if (i > 0 && sentences[sid].trim()) sentences[++sid] = "";
+        sentences[sid] += p;
+      });
+      const curSid = sid;
+      if (/[。！？!?…]$/.test(t.surface_form) || /\n$/.test(t.surface_form)) { if (sentences[sid].trim()) sentences[++sid] = ""; }
       if (skipToken(t)) continue;
 
       const base = t.basic_form && t.basic_form !== "*" ? t.basic_form : t.surface_form;
@@ -172,11 +182,16 @@
           found: !!row,
           count: 0,
           surfaces: [],
+          sid: curSid,
         };
         words.set(key, w);
       }
       w.count++;
       if (!w.surfaces.includes(t.surface_form)) w.surfaces.push(t.surface_form);
+    }
+    for (const w of words.values()) {
+      w.sentence = (sentences[w.sid] || "").trim().replace(/\s+/g, " ");
+      delete w.sid;
     }
     return { segments: segs, words: [...words.values()] };
   }

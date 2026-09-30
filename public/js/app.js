@@ -87,6 +87,38 @@
     console.error(e);
   });
 
+  // ---------- 本次累积：这次打开页面期间分析过的所有文字的词 ----------
+  // 存在 sessionStorage：刷新不丢，关掉标签页就清空
+  const SKEY = "cishu.session";
+  let session = { texts: [], words: {} };
+  try { session = JSON.parse(sessionStorage.getItem(SKEY)) || session; } catch (e) { /* 忽略 */ }
+  const saveSession = () => { try { sessionStorage.setItem(SKEY, JSON.stringify(session)); } catch (e) { /* 忽略 */ } };
+  const textId = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return t.length + ":" + h; };
+  function addToSession(text, res) {
+    const tid = textId(text.trim());
+    if (session.texts.includes(tid)) return; // 同一段文字重复分析不重复计数
+    session.texts.push(tid);
+    for (const w of res.words) {
+      const id = knownId(w), s = session.words[id];
+      if (s) s.count += w.count;
+      else session.words[id] = { word: w.word, reading: w.reading, pos: w.pos, jlpt: w.jlpt, zh: w.zh, en: w.en,
+        count: w.count, forms: w.otherForms.join("、"), sentence: w.sentence || "", order: Object.keys(session.words).length };
+    }
+    saveSession();
+  }
+  function updateSessionInfo() {
+    const n = Object.keys(session.words).length;
+    $("sessionInfo").textContent = n
+      ? `本次已分析 ${session.texts.length} 段文字，累计 ${n} 个词；关闭页面后清空。`
+      : "这次打开页面后分析过的文字，生词会累积在这里；关闭页面后清空。";
+    $("clearSession").hidden = !n;
+  }
+  $("clearSession").addEventListener("click", () => {
+    session = { texts: [], words: {} };
+    saveSession();
+    updateSessionInfo();
+  });
+
   // ---------- 分析 ----------
   function run() {
     const text = el.input.value;
@@ -98,6 +130,7 @@
     }
     result = Analyzer.analyze(text, tokenizer, dict);
     focusKey = null;
+    addToSession(text, result);
     if (location.hash.startsWith("#kanji/")) location.hash = ""; // 在汉字页里分析：回到生词表
     render();
     // 单行框里回到开头显示（Jisho 也是从第一句开始显示）
@@ -173,6 +206,7 @@
     document.body.classList.toggle("no-furigana", !el.furigana.checked);
     const has = !!(result && result.words.length);
     el.toolbar.hidden = !has;
+    updateSessionInfo();
     el.summary.hidden = !has;
     el.sentence.hidden = !has || location.hash.startsWith("#kanji/");
     if (!has) {
@@ -368,23 +402,32 @@
   route();
 
   // ---------- 导出 ----------
+  let exportRange = "session";
+  const passLevel = (jlpt) => { const lv = +el.level.value; return !(lv && jlpt && jlpt > lv); };
   function exportRows() {
+    if (exportRange === "session") {
+      return Object.entries(session.words)
+        .filter(([id, w]) => !known.has(id) && passLevel(w.jlpt))
+        .sort((a, b) => a[1].order - b[1].order)
+        .map(([, w]) => ({ word: w.word, reading: w.reading, pos: w.pos, jlpt: w.jlpt ? "N" + w.jlpt : "",
+          meaning: w.zh || w.en || "", count: w.count, forms: w.forms, sentence: w.sentence }));
+    }
     return visibleWords().map((w) => ({
       word: w.word, reading: w.reading, pos: w.pos,
       jlpt: w.jlpt ? "N" + w.jlpt : "", meaning: w.zh || w.en || "", count: w.count,
-      forms: w.otherForms.join("、"), surfaces: w.surfaces.filter((x) => x !== w.word).join("、"),
+      forms: w.otherForms.join("、"), sentence: w.sentence || "",
     }));
   }
-  const HEAD = ["词", "读音", "词性", "JLPT", "释义", "出现次数", "其他写法", "原文写作"];
-  const asRow = (r) => [r.word, r.reading, r.pos, r.jlpt, r.meaning, r.count, r.forms, r.surfaces];
+  const HEAD = ["词", "读音", "词性", "JLPT", "释义", "出现次数", "其他写法", "例句"];
+  const asRow = (r) => [r.word, r.reading, r.pos, r.jlpt, r.meaning, r.count, r.forms, r.sentence];
   const csvCell = (s) => /[",\n]/.test(String(s)) ? `"${String(s).replace(/"/g, '""')}"` : String(s);
   const toCsv = (rows) => [HEAD].concat(rows.map(asRow)).map((r) => r.map(csvCell).join(",")).join("\r\n");
   const toTxt = (rows) => rows.map((r) => `${r.word}【${r.reading}】${r.jlpt ? " " + r.jlpt : ""}　${r.meaning}`).join("\n");
   // Anki 2.1.55+ 认得这几行文件头：正面「词＋读音」，背面「释义」，第三列当标签
   const tabSafe = (s) => String(s).replace(/[\t\n]/g, " ");
   const toAnki = (rows) => "#separator:tab\n#html:false\n#tags column:4\n" +
-    rows.map((r) => [r.word, r.reading, r.meaning + (r.pos ? `（${r.pos}）` : ""), r.jlpt ? "JLPT_" + r.jlpt : ""].map(tabSafe).join("\t")).join("\n");
-  const toXlsx = (rows) => Xlsx.make([HEAD].concat(rows.map(asRow)), { sheetName: "生词表", widths: [14, 16, 18, 7, 48, 9, 16, 16] });
+    rows.map((r) => [r.word, r.reading, r.meaning + (r.pos ? `（${r.pos}）` : ""), r.jlpt ? "JLPT_" + r.jlpt : "", r.sentence].map(tabSafe).join("\t")).join("\n");
+  const toXlsx = (rows) => Xlsx.make([HEAD].concat(rows.map(asRow)), { sheetName: "生词表", widths: [14, 16, 18, 7, 44, 9, 14, 60] });
   const stamp = () => new Date().toISOString().slice(0, 10);
 
   // 在 claude.ai 里打开时，页面不能自己下载文件，要走平台的保存确认；其他地方就用浏览器下载
@@ -429,11 +472,21 @@
   document.querySelectorAll(".export-format").forEach((b) =>
     b.addEventListener("click", () => saveFile(...FORMATS[b.dataset.format]())));
 
-  el.exportBtn.addEventListener("click", () => {
+  const rangeBtns = [...document.querySelectorAll("#rangeSwitch button")];
+  function refreshExport() {
+    rangeBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === exportRange)));
+    $("rangeNote").textContent = exportRange === "session"
+      ? `本次打开页面后分析过的 ${session.texts.length} 段文字，`
+      : "当前这段文字，";
     const rows = exportRows();
     $("exportCount").textContent = rows.length;
     el.exportText.value = toTxt(rows);
+  }
+  rangeBtns.forEach((b) => b.addEventListener("click", () => { exportRange = b.dataset.range; exportStatus.textContent = ""; refreshExport(); }));
+
+  el.exportBtn.addEventListener("click", () => {
     exportStatus.textContent = "";
+    refreshExport();
     if (el.dialog.showModal) el.dialog.showModal();
     else el.dialog.setAttribute("open", "");
   });
