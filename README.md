@@ -40,6 +40,13 @@ npm run serve        # 然后打开 http://localhost:8000
 
 `public/` 目录就是整个网站，丢到任何静态托管都行。仓库自带 GitHub Actions（`.github/workflows/pages.yml`）：推到 `main` 分支后自动发布到 GitHub Pages（需要在仓库 Settings → Pages 里把 Source 设为 GitHub Actions）。
 
+### 绑定自己的域名（GitHub Pages）
+
+1. 在域名商那里加一条 DNS：子域名（如 `www`）用 CNAME 指向 `colddcc.github.io`；根域名用 4 条 A 记录指向 185.199.108.153 / 109.153 / 110.153 / 111.153。
+2. 仓库 Settings → Pages → Custom domain 填上域名，等证书生成后勾选 Enforce HTTPS。
+
+首次打开会下载约 18 MB 词典，之后由 `sw.js` 缓存，再打开秒开、断网也能用。词典文件更新时，把 `sw.js` 里的 `VERSION` 加一。
+
 > 注意：`public/vendor/kuromoji-dict/*.dat.gz` 必须按普通文件原样返回。如果托管服务给 `.gz` 文件加 `Content-Encoding: gzip` 头，浏览器会提前解压，分词器就会加载失败。GitHub Pages、Netlify、Vercel 默认都没问题。
 
 ## 目录

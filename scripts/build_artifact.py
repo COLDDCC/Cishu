@@ -15,6 +15,7 @@ body = re.search(r"<body>(.*?)</body>", src, re.S).group(1)
 head = re.sub(r'\s*<meta charset="utf-8">|\s*<meta name="viewport"[^>]*>', "", head)
 title = re.search(r"<title>.*?</title>", head, re.S).group(0)
 head = head.replace(title, "")
+head = re.sub(r'\s*<link rel="manifest"[^>]*>', "", head)
 
 body = body.replace('<a href="./">', '<a href="#">')
 out = title + "\n" + head.strip() + """

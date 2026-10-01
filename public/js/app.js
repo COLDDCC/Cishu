@@ -68,7 +68,7 @@
   // ---------- 加载分词器和词典 ----------
   let tokenizer = null, dict = null, result = null;
 
-  el.status.textContent = "正在加载分词词典（约 18 MB，首次较慢，之后会被浏览器缓存）…";
+  el.status.textContent = "正在加载分词词典（约 18 MB，只有第一次较慢，之后离线也能用）…";
   const tokP = new Promise((resolve, reject) => {
     kuromoji.builder({ dicPath: "vendor/kuromoji-dict/" }).build((err, t) => (err ? reject(err) : resolve(t)));
   });
