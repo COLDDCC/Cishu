@@ -1,6 +1,6 @@
 {
-  "name": "词书 · 日文词表",
-  "short_name": "词书",
+  "name": "拾词 · 日文词表",
+  "short_name": "拾词",
   "description": "粘贴任意日文，列出所有词的读音、原形、中文释义和 JLPT 等级。",
   "start_url": "./",
   "scope": "./",
