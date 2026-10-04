@@ -10,11 +10,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/COLDDCC/Cishu.git"
+    "url": "git+https://github.com/COLDDCC/ShiCiJP.git"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/COLDDCC/Cishu/issues"
+    "url": "https://github.com/COLDDCC/ShiCiJP/issues"
   },
   "homepage": "https://shicijp.com",
   "devDependencies": {
