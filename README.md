@@ -1,6 +1,6 @@
 # 拾词 Shici
 
-网址：https://shicijp.com （域名接好之前用 https://colddcc.github.io/Cishu/ ）
+网址：https://shicijp.com （域名接好之前用 https://colddcc.github.io/ShiCiJP/ ）
 
 Jisho 的中文版：粘贴任意日文（小说、吐槽、歌词、新闻都行），下面列出里面所有的词：读音、原形、中文释义、JLPT 等级。
 
