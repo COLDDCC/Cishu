@@ -29,8 +29,8 @@
       });
     }
 
-    // 给分词得到的原形找词条；reading 为原形的平假名读音（可能为空）
-    lookup(base, reading) {
+    // 给分词得到的原形找词条；reading 为原形的平假名读音（可能为空），pos 为分词器给的词性
+    lookup(base, reading, pos) {
       const score = (i) => {
         const r = this.rows[i];
         let s = 0;
@@ -45,15 +45,19 @@
       if (ids) return best(ids);
 
       if (isKana(base)) {
+        // 假名写的词常对应汉字词条（わかる→分かる、ところ→所、あと→後）。
+        // 但按读音硬凑容易张冠李戴（しんと→信徒）：动词、形容词照常；其他词性只认有 JLPT 等级的常用词
         ids = this.byReading.get(kataToHira(base));
-        if (ids) return best(ids);
-        return -1;
+        if (!ids) return -1;
+        if (pos !== "動詞" && pos !== "形容詞") ids = ids.filter((i) => this.rows[i][F.JLPT]);
+        return ids.length ? best(ids) : -1;
       }
-      // 写法不同（如「終る」对「終わる」）：同读音且共享汉字
+      // 写法不同（如「終る」对「終わる」）：同读音，且原词的每个汉字都出现在词条写法里（避免「不急」→「不朽」）
       if (reading) {
+        const kanji = [...base].filter(hasKanji);
         ids = (this.byReading.get(reading) || []).filter((i) => {
-          const w = this.rows[i][F.WORD] + (this.rows[i][F.ALT] || "");
-          return [...base].some((c) => hasKanji(c) && w.includes(c));
+          const forms = [this.rows[i][F.WORD]].concat(this.rows[i][F.ALT] ? this.rows[i][F.ALT].split("|") : []);
+          return forms.some((f) => kanji.every((c) => f.includes(c)));
         });
         if (ids.length) return best(ids);
       }
@@ -69,9 +73,15 @@
 
   // 不进入词表的词性
   function skipToken(t) {
-    const p = t.pos, d1 = t.pos_detail_1;
+    if (t.merged) return false;
+    const p = t.pos, d1 = t.pos_detail_1, d2 = t.pos_detail_2;
     if (p === "記号" || p === "助詞" || p === "助動詞" || p === "フィラー" || p === "その他") return true;
-    if (d1 === "数" || d1 === "非自立" || d1 === "接尾" && p === "動詞") return true;
+    if (d1 === "数" || (d1 === "接尾" && p === "動詞")) return true;
+    if (d1 === "非自立") {
+      // わけ・はず・ところ・こと・もの・まま 这类非自立名词对学习者很重要，保留；
+      // の・ん 和「よう・そう・みたい」这种助动词词干是语法成分，跳过；非自立的动词/形容词（ている的いる等）也跳过
+      if (p !== "名詞" || d2 === "助動詞語幹" || t.surface_form === "の" || t.surface_form === "ん") return true;
+    }
     if (!/[぀-ヿ㐀-鿿々]/.test(t.surface_form)) return true; // 纯英数、空白
     return false;
   }
@@ -81,6 +91,7 @@
     const cache = new Map();
     return function baseReading(t) {
       const base = t.basic_form && t.basic_form !== "*" ? t.basic_form : t.surface_form;
+      if (t.merged && base !== t.surface_form) return "";
       if (base === t.surface_form && t.reading) return kataToHira(t.reading);
       if (isKana(base)) return kataToHira(base);
       if (cache.has(base)) return cache.get(base);
@@ -91,21 +102,66 @@
     };
   }
 
+  // 相邻 2～3 个词拼起来是词典里的词就合并（分词器会把「とんでもない」切成「とんでも」+「ない」）。
+  // 先试原文原样拼接，再试「前面原样 + 最后一个词的原形」（落ち着き+ました 这类不会命中，因为结尾是助动词）。
+  const NO_MERGE_POS = new Set(["記号", "助詞", "助動詞", "フィラー", "その他"]);
+  function mergeTokens(tokens, dict) {
+    const out = [];
+    for (let i = 0; i < tokens.length; i++) {
+      let merged = null;
+      // 第一个词不能是助词/助动词/数字/非自立成分（否则「上げてしまった」会被合成感叹词「しまった」）
+      if (!NO_MERGE_POS.has(tokens[i].pos) && tokens[i].pos_detail_1 !== "非自立") {
+        for (let len = 3; len >= 2 && !merged; len--) {
+          const span = tokens.slice(i, i + len);
+          if (span.length < len || span.some((t) => t.pos === "記号" || !t.surface_form.trim())) continue;
+          if (span.every((t) => t.pos_detail_1 === "数")) continue; // 纯数字（「二十」「三百」）不合并
+          // 中间夹助词的不合并（「雨が降る」应拆成 雨 / 降る），助词只允许在最后（こちらこそ、何でも）
+          if (span.slice(1, -1).some((t) => t.pos === "助詞" || t.pos === "助動詞")) continue;
+          const surface = span.map((t) => t.surface_form).join("");
+          const last = span[len - 1];
+          const lastBase = last.basic_form && last.basic_form !== "*" ? last.basic_form : last.surface_form;
+          const base = span.slice(0, -1).map((t) => t.surface_form).join("") + lastBase;
+          const hit = dict.byForm.has(surface) ? surface : (last.pos !== "助動詞" && last.pos !== "助詞" && dict.byForm.has(base)) ? base : null;
+          if (hit) {
+            merged = {
+              surface_form: surface, basic_form: hit, merged: true,
+              reading: span.every((t) => t.reading) ? span.map((t) => t.reading).join("") : "",
+              pos: span[0].pos, pos_detail_1: "", pos_detail_2: "",
+            };
+            i += len - 1;
+          }
+        }
+      }
+      out.push(merged || tokens[i]);
+    }
+    return out;
+  }
+
   // 主函数：文本 → { tokens: 原文分段, words: 去重后的词表 }
   function analyze(text, tokenizer, dict) {
     const baseReading = makeBaseReader(tokenizer);
-    const tokens = tokenizer.tokenize(text);
+    const tokens = mergeTokens(tokenizer.tokenize(text), dict);
     const words = new Map();
     const segs = [];
+    // 按句号、问号、感叹号和换行切句子，记下每个词第一次出现在哪一句（导出时当例句）
+    const sentences = [""];
+    let sid = 0;
 
     for (const t of tokens) {
       const seg = { surface: t.surface_form, reading: t.reading ? kataToHira(t.reading) : "", key: null };
       segs.push(seg);
+      const parts = t.surface_form.split("\n");
+      parts.forEach((p, i) => {
+        if (i > 0 && sentences[sid].trim()) sentences[++sid] = "";
+        sentences[sid] += p;
+      });
+      const curSid = sid;
+      if (/[。！？!?…]$/.test(t.surface_form) || /\n$/.test(t.surface_form)) { if (sentences[sid].trim()) sentences[++sid] = ""; }
       if (skipToken(t)) continue;
 
       const base = t.basic_form && t.basic_form !== "*" ? t.basic_form : t.surface_form;
       const reading = baseReading(t);
-      const idx = dict.lookup(base, reading);
+      const idx = dict.lookup(base, reading, t.pos);
       const key = idx >= 0 ? "#" + idx : base + "|" + reading;
       seg.key = key;
 
@@ -118,7 +174,7 @@
           word: row ? pickForm(row, base) : base,
           reading: row ? row[F.READING] : reading,
           otherForms: row ? formsOf(row).filter((f) => f !== pickForm(row, base)) : [],
-          pos: row && row[F.POS] ? row[F.POS] : posZh(t),
+          pos: row && row[F.POS] ? row[F.POS] : t.merged ? "" : posZh(t),
           jlpt: row ? row[F.JLPT] : 0,
           zh: row ? row[F.ZH] : "",
           en: row ? row[F.EN] : "",
@@ -126,11 +182,16 @@
           found: !!row,
           count: 0,
           surfaces: [],
+          sid: curSid,
         };
         words.set(key, w);
       }
       w.count++;
       if (!w.surfaces.includes(t.surface_form)) w.surfaces.push(t.surface_form);
+    }
+    for (const w of words.values()) {
+      w.sentence = (sentences[w.sid] || "").trim().replace(/\s+/g, " ");
+      delete w.sid;
     }
     return { segments: segs, words: [...words.values()] };
   }

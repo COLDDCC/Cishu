@@ -8114,19 +8114,33 @@ BrowserDictionaryLoader.prototype = Object.create(DictionaryLoader.prototype);
  * @param {BrowserDictionaryLoader~onLoad} callback Callback function
  */
 BrowserDictionaryLoader.prototype.loadArrayBuffer = function (url, callback) {
+    // [cishu] 某些托管不接受 .gz 文件：页面可设 self.CISHU_DICT_SUFFIX = ".b64.txt"，改读 base64 文本版
+    var b64 = typeof self !== "undefined" && self.CISHU_DICT_SUFFIX;
+    if (b64) url = url + b64;
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
-    xhr.responseType = "arraybuffer";
+    xhr.responseType = b64 ? "text" : "arraybuffer";
     xhr.onload = function () {
         if (this.status > 0 && this.status !== 200) {
             callback(xhr.statusText, null);
             return;
         }
         var arraybuffer = this.response;
+        if (b64) {
+            var bin = atob(this.response.replace(/\s+/g, ""));
+            var buf = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            arraybuffer = buf.buffer;
+        }
 
-        var gz = new zlib.Zlib.Gunzip(new Uint8Array(arraybuffer));
-        var typed_array = gz.decompress();
-        callback(null, typed_array.buffer);
+        // [cishu] 有的托管会带 Content-Encoding: gzip，浏览器已自动解压；只有还是 gzip 格式（1f 8b 开头）时才解压
+        var bytes = new Uint8Array(arraybuffer);
+        if (bytes.length > 1 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+            var gz = new zlib.Zlib.Gunzip(bytes);
+            callback(null, gz.decompress().buffer);
+        } else {
+            callback(null, arraybuffer);
+        }
     };
     xhr.onerror = function (err) {
         callback(err, null);

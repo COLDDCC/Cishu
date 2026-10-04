@@ -3,85 +3,175 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>词书 · 日语生词表</title>
+  <title>拾词</title>
   <meta name="description" content="粘贴任意日文，列出所有词的读音、原形、中文释义和 JLPT 等级。纯静态，分词在浏览器里完成。">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2218%22 fill=%22%2347db27%22/%3E%3Ctext x=%2250%22 y=%2272%22 font-size=%2262%22 text-anchor=%22middle%22 fill=%22white%22%3E%E8%AF%8D%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2218%22 fill=%22%23165e83%22/%3E%3Ctext x=%2250%22 y=%2272%22 font-size=%2262%22 text-anchor=%22middle%22 fill=%22white%22%3E%E6%8B%BE%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#165e83">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="拾词 · 日文词表">
+  <meta property="og:description" content="粘贴任意日文（小说、歌词、新闻），列出所有词的读音、原形、中文释义和 JLPT 等级，可导出 Excel。">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="css/style.css">
+  <script>try { var t = localStorage.getItem("cishu.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; var z = localStorage.getItem("cishu.size"); if (z === "s" || z === "l") document.documentElement.dataset.size = z; } catch (e) {}</script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <h1 class="logo">词书 <small>Cishu</small></h1>
-      <p class="tagline">粘贴日文 → 生词表。分词和查词都在你的浏览器里完成，不上传任何内容。</p>
-    </div>
+  <header class="site-header row">
+    <h1 class="logo"><a href="./"><span class="seal" aria-hidden="true"></span>拾词</a></h1>
+    <nav class="nav">
+      <a href="https://github.com/COLDDCC/Cishu" target="_blank" rel="noopener">关于</a>
+      <button type="button" id="themeBtn" class="nav-btn" title="切换浅色 / 深色 / 跟随系统">主题</button>
+    </nav>
   </header>
 
-  <main class="wrap">
-    <section class="input-area">
-      <textarea id="input" rows="6" placeholder="在这里粘贴任意日文：小说、歌词、新闻、吐槽……"></textarea>
-      <div class="input-actions">
-        <button id="analyze" class="primary" disabled>加载中…</button>
-        <button id="clear" class="ghost">清空</button>
-        <span id="status" class="status"></span>
+  <div class="row search-row">
+    <div class="input-methods">
+      <button type="button" class="input-method" id="pasteBtn" title="从剪贴板粘贴">
+        <svg viewBox="0 0 30 30" aria-hidden="true"><rect x="7" y="5" width="16" height="21" rx="2"/><rect x="11" y="3" width="8" height="5" rx="1.5"/><path d="M11 14h8M11 19h8"/></svg>
+        <span>粘贴</span>
+      </button>
+      <button type="button" class="input-method" id="sampleBtn" title="填入一段例文">
+        <svg viewBox="0 0 30 30" aria-hidden="true"><path d="M6 5h13l5 5v15H6z"/><path d="M19 5v5h5"/><path d="M10 15h10M10 19h10M10 23h6"/></svg>
+        <span>例文</span>
+      </button>
+      <label class="input-method" title="打开 txt 文件">
+        <svg viewBox="0 0 30 30" aria-hidden="true"><path d="M3 9h9l2 3h13v12H3z"/><path d="M3 9V6h8l2 3"/></svg>
+        <span>文件</span>
+        <input type="file" id="fileInput" accept=".txt,text/plain" hidden>
+      </label>
+    </div>
+    <form class="search" id="searchForm" onsubmit="return false">
+      <div class="search-inner">
+        <label class="search-type" title="只看某个 JLPT 等级及以上">
+          <select id="level">
+            <option value="0">全部</option>
+            <option value="4">N4+</option>
+            <option value="3">N3+</option>
+            <option value="2">N2+</option>
+            <option value="1">N1+</option>
+          </select>
+        </label>
+        <textarea id="input" rows="1" wrap="off" lang="ja" spellcheck="false"
+          placeholder="日文：小说、歌词、新闻、吐槽……"></textarea>
+        <button type="button" id="clear" class="icon-btn" title="清空" aria-label="清空">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <button type="submit" id="analyze" class="icon-btn submit" title="分析 (Enter)" aria-label="分析" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+        </button>
       </div>
-    </section>
+    </form>
+  </div>
+  <div class="row"><p id="status" class="status"></p></div>
 
-    <section id="toolbar" class="toolbar" hidden>
-      <label class="tool">
-        等级
-        <select id="level">
-          <option value="0">全部</option>
-          <option value="4">N4 及以上</option>
-          <option value="3">N3 及以上</option>
-          <option value="2">N2 及以上</option>
-          <option value="1">N1 及以上</option>
-        </select>
-      </label>
-      <label class="tool">
-        排序
-        <select id="sort">
-          <option value="order">出现顺序</option>
-          <option value="count">出现次数</option>
-          <option value="level">难度（难→易）</option>
-        </select>
-      </label>
-      <label class="tool check"><input type="checkbox" id="furigana" checked> 振假名</label>
-      <label class="tool check"><input type="checkbox" id="showKnown"> 显示已认识的词</label>
-      <span class="spacer"></span>
-      <button id="export" class="ghost">导出生词表</button>
-    </section>
+  <main class="row">
+    <section id="kanjiView" class="kanji-view" hidden></section>
+    <section id="sentence" class="zen" lang="ja" hidden></section>
+    <button type="button" id="zenToggle" class="zen-toggle" hidden>展开全文</button>
 
-    <section id="summary" class="summary" hidden></section>
-    <section id="sentence" class="sentence" hidden></section>
-    <section id="results" class="results"></section>
+    <div class="columns" id="mainColumns">
+      <div id="primary" class="primary">
+        <h4 id="summary" class="block-title" hidden></h4>
+        <section id="results" class="results"></section>
+      </div>
+
+      <aside id="toolbar" class="secondary" hidden>
+        <div class="side-block" id="kanjiSide" hidden></div>
+        <div class="side-block">
+          <h4 class="block-title">筛选</h4>
+          <div class="side-row">显示方式
+            <span class="size-switch" id="viewSwitch" role="group" aria-label="显示方式">
+              <button type="button" data-view="list" aria-pressed="false" title="所有词一次列出">列表</button>
+              <button type="button" data-view="focus" aria-pressed="false" title="一次只看一个词（像 Jisho）">逐词</button>
+            </span>
+          </div>
+          <div class="side-row">字号
+            <span class="size-switch" id="sizeSwitch" role="group" aria-label="字号">
+              <button type="button" data-size="s" aria-pressed="false">小</button>
+              <button type="button" data-size="m" aria-pressed="false">中</button>
+              <button type="button" data-size="l" aria-pressed="false">大</button>
+            </span>
+          </div>
+          <label class="side-row">排序
+            <select id="sort">
+              <option value="order">出现顺序</option>
+              <option value="count">出现次数</option>
+              <option value="level">难度（难→易）</option>
+            </select>
+          </label>
+          <label class="side-row check"><input type="checkbox" id="furigana" checked> 显示振假名</label>
+          <label class="side-row check"><input type="checkbox" id="showKnown"> 显示已认识的词</label>
+        </div>
+        <div class="side-block">
+          <h4 class="block-title">生词表</h4>
+          <p class="minor" id="sessionInfo">这次打开页面后分析过的文字，生词会累积在这里；关闭页面后清空。</p>
+          <button type="button" id="export" class="button">导出生词表</button>
+          <button type="button" id="clearSession" class="link-btn" hidden>清空本次</button>
+        </div>
+        <div class="side-block tip">
+          <h4 class="block-title">小提示</h4>
+          <p class="minor">点上方原文里的词，会跳到对应词条。点词条下的「认识」可以把它勾掉，下次也会自动隐藏。</p>
+        </div>
+      </aside>
+    </div>
 
     <dialog id="exportDialog">
       <form method="dialog">
         <h2>导出生词表</h2>
-        <p class="hint">导出当前列表里显示的词（已应用等级筛选，不含勾掉的认识词）。</p>
-        <textarea id="exportText" rows="12" readonly></textarea>
+        <div class="side-row export-range">导出范围
+          <span class="size-switch" id="rangeSwitch" role="group" aria-label="导出范围">
+            <button type="button" data-range="session" aria-pressed="true">本次全部</button>
+            <button type="button" data-range="current" aria-pressed="false">当前文本</button>
+          </span>
+        </div>
+        <p class="minor"><span id="rangeNote"></span>已按等级筛选，不含勾掉的认识词，共 <b id="exportCount">0</b> 个。</p>
+        <div class="export-formats">
+          <button type="button" class="export-format" data-format="xlsx"><b>Excel</b><span>.xlsx，直接用 Excel / Numbers / WPS 打开</span></button>
+          <button type="button" class="export-format" data-format="csv"><b>CSV</b><span>通用表格格式，各种软件都能导入</span></button>
+          <button type="button" class="export-format" data-format="anki"><b>Anki</b><span>.txt，Anki「导入文件」即可做成卡片</span></button>
+          <button type="button" class="export-format" data-format="txt"><b>纯文本</b><span>.txt，一行一个词，方便打印或贴到笔记里</span></button>
+        </div>
+        <p class="export-status" id="exportStatus" role="status"></p>
+        <details class="export-preview">
+          <summary>预览 / 复制文字</summary>
+          <textarea id="exportText" rows="10" readonly></textarea>
+          <div class="dialog-actions">
+            <button type="button" id="copyExport" class="button secondary-btn">复制</button>
+            <button type="button" id="copyCsv" class="button secondary-btn">复制 CSV</button>
+          </div>
+        </details>
         <div class="dialog-actions">
-          <button type="button" id="copyExport" class="ghost">复制</button>
-          <button type="button" id="downloadCsv" class="ghost">下载 CSV（Excel / Anki）</button>
-          <button type="button" id="downloadTxt" class="ghost">下载 TXT</button>
           <span class="spacer"></span>
-          <button value="close" class="primary">关闭</button>
+          <button value="close" class="button">关闭</button>
         </div>
       </form>
     </dialog>
   </main>
 
-  <footer class="site-footer wrap">
-    <p>
-      分词：<a href="https://github.com/takuyaa/kuromoji.js">kuromoji.js</a>（IPADIC，Apache-2.0）。
-      词条与英文释义：<a href="https://www.edrdg.org/jmdict/j_jmdict.html">JMdict</a>（CC BY-SA 4.0，EDRDG）。
-      中文释义：<a href="https://github.com/lxl66566/Japanese-Chinese-thesaurus">Japanese-Chinese-thesaurus</a>（Unlicense）及本项目补译。
-      JLPT 等级：<a href="https://github.com/jamsinclair/open-anki-jlpt-decks">open-anki-jlpt-decks</a>（MIT），非官方，仅供参考。
-    </p>
+  <footer class="site-footer">
+    <div class="ornament"></div>
+    <div class="row footer-cols">
+      <p>拾词是一个纯静态网页：分词和查词都在你的浏览器里完成，不上传任何内容。</p>
+      <p>
+        分词：<a href="https://github.com/takuyaa/kuromoji.js">kuromoji.js</a>（IPADIC，Apache-2.0）。
+        词条与英文释义：<a href="https://www.edrdg.org/jmdict/j_jmdict.html">JMdict</a>（CC BY-SA 4.0，EDRDG）。
+      </p>
+      <p>
+        中文释义：<a href="https://github.com/lxl66566/Japanese-Chinese-thesaurus">Japanese-Chinese-thesaurus</a>（Unlicense）及本项目补译。
+        JLPT 等级：<a href="https://github.com/jamsinclair/open-anki-jlpt-decks">open-anki-jlpt-decks</a>（MIT），非官方，仅供参考。
+        汉字数据：<a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project">KANJIDIC2</a>（CC BY-SA 4.0，EDRDG）；笔顺：<a href="https://kanjivg.tagaini.net">KanjiVG</a>（© Ulrich Apel，CC BY-SA 3.0）。
+      </p>
+    </div>
   </footer>
 
   <script src="vendor/kuromoji.js"></script>
   <script src="js/analyzer.js"></script>
+  <script src="js/kanji.js"></script>
+  <script src="js/xlsx.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    // 离线缓存：第二次打开不用再下载 18 MB 词典（claude.ai 网页版里不启用）
+    if ("serviceWorker" in navigator && !self.CISHU_DICT_SUFFIX && /^https:|^http:\/\/localhost/.test(location.href))
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+  </script>
 </body>
 </html>

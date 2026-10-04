@@ -6,6 +6,7 @@
   data-src/n1.csv … n5.csv       jamsinclair/open-anki-jlpt-decks（MIT）JLPT 等级
   data-src/zh-extra.tsv          本项目补译的中文释义（词\t读音\t释义[\t词性]），也可新增词条
 
+另输出 public/dict/kanji.json（汉字详情页，按需加载）。
 输出每条为数组：[词形, 其他写法(|分隔), 读音(平假名), 词性, JLPT(0-5, 0=无), 中文释义, 英文释义]
 用法：python3 scripts/build_dict.py [--missing 输出缺中文释义的词表路径]
 """
@@ -89,6 +90,17 @@ def split_forms(expr):
     return [f.strip() for f in re.split(r"[;；,、]", expr) if f.strip() and not re.search(r"[～〜]", f)]
 
 
+def strip_suru(form, reading):
+    """「生活」配「せいかつする」：读音多了する，去掉以便和原词条合并（刷る/擦る 这种本身以る结尾的不动）。"""
+    if reading.endswith("する") and len(reading) > 2 and not kata_to_hira(form).endswith("る"):
+        return reading[:-2]
+    return reading
+
+
+# JLPT 词表源文件里的个别错误：(错误写法, 读音) → 正确写法
+JLPT_FIX = {("副", "とりわけ"): ["取り分け", "とりわけ"]}
+
+
 def load_jlpt():
     """返回 {(词形, 读音): 等级}，同一词取最简单的等级。"""
     lv = {}
@@ -98,6 +110,9 @@ def load_jlpt():
             for row in csv.DictReader(f):
                 forms = split_forms(row["expression"])
                 readings = [kata_to_hira(r) for r in split_forms(row["reading"])]
+                readings = [strip_suru(forms[0], r) for r in readings] if forms else readings
+                if forms and readings and (forms[0], readings[0]) in JLPT_FIX:
+                    forms = JLPT_FIX[(forms[0], readings[0])]
                 if not forms:
                     continue
                 for fm in forms:
@@ -121,8 +136,10 @@ def load_extra_zh():
             parts = line.rstrip("\n").split("\t")
             if len(parts) < 3 or not parts[2].strip():
                 continue
-            forms = [fm.strip() for fm in parts[0].split("|") if fm.strip()]
-            reading = kata_to_hira(parts[1].strip())
+            forms = [f for fm in parts[0].split("|") for f in (split_forms(fm) or [fm.strip()]) if f]
+            reading = kata_to_hira((split_forms(parts[1]) or [parts[1].strip()])[0])
+            if forms:
+                reading = strip_suru(forms[0], reading)
             for fm in forms:
                 out[(fm, reading)] = parts[2].strip()
             rows.append((forms, reading, parts[2].strip(), parts[3].strip() if len(parts) > 3 else ""))
@@ -142,8 +159,13 @@ def main():
     entries = []  # dict: forms, reading, pos, jlpt, en
     seen = {}
     for v in vocab:
-        forms = [v["word"]] + ([v["altWord"]] if v.get("altWord") else [])
-        reading = kata_to_hira(v["reading"])
+        # 个别条目的词形写成「いい; よい」，拆成多个写法
+        forms = split_forms(v["word"]) or [v["word"]]
+        if v.get("altWord"):
+            forms += [f for f in split_forms(v["altWord"]) if f not in forms]
+        reading = kata_to_hira((split_forms(v["reading"]) or [v["reading"]])[0])
+        if (forms[0], reading) in JLPT_FIX:
+            continue  # 源数据里的错误写法（另由 JLPT 表补正）
         key = (forms[0], reading)
         if key in seen:
             continue
@@ -179,6 +201,8 @@ def main():
 
     # zh-extra.tsv 里 JMdict 常用词没有的词（口语、网络用语等）作为新词条加入
     for forms, reading, _, pos in extra_rows:
+        if (forms[0], reading) in JLPT_FIX:
+            continue
         hit = next((index[(fm, reading)] for fm in forms if (fm, reading) in index), None)
         if hit:  # 已有词条：补上新写法（如「ヤバ」）
             for fm in forms:
@@ -220,6 +244,16 @@ def main():
     have = sum(1 for x in out if x[5])
     print(f"entries={len(out)} zh={have} missing={len(missing)} "
           f"jlpt_missing={sum(1 for e in missing if e['jlpt'])} -> {OUT} ({os.path.getsize(OUT)//1024} KB)")
+
+    # 汉字详情页用：常用汉字的英文意思、音训读、笔画、年级、JLPT、笔顺路径（KanjiVG）
+    kanji = {}
+    for k in json.load(open(os.path.join(SRC, "kotobako-static.json"), encoding="utf-8"))["datasets"]["kanji"]:
+        kanji[k["char"]] = [k["meanings"], k["onyomi"], k["kunyomi"], k["strokeCount"], k["grade"] or 0,
+                            int(k["jlpt"][1]) if k.get("jlpt") else 0, k["strokes"]]
+    kout = os.path.join(os.path.dirname(OUT), "kanji.json")
+    with open(kout, "w", encoding="utf-8") as f:
+        json.dump(kanji, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"kanji={len(kanji)} -> {kout} ({os.path.getsize(kout)//1024} KB)")
 
     if args.missing:
         missing.sort(key=lambda e: (-(e["jlpt"] or 0), e["reading"]))

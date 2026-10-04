@@ -1,0 +1,12 @@
+{
+  "name": "拾词 · 日文词表",
+  "short_name": "拾词",
+  "description": "粘贴任意日文，列出所有词的读音、原形、中文释义和 JLPT 等级。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#165e83",
+  "lang": "zh-CN",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
