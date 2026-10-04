@@ -464,10 +464,10 @@
 
   // 文件名用英文：部分浏览器会丢掉「中文名 + .xlsx」的文件名，只剩 download
   const FORMATS = {
-    xlsx: () => [`Cishu-${stamp()}.xlsx`, toXlsx(exportRows()), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
-    csv: () => [`Cishu-${stamp()}.csv`, "\ufeff" + toCsv(exportRows()), "text/csv;charset=utf-8"],
-    anki: () => [`Cishu-Anki-${stamp()}.txt`, toAnki(exportRows()), "text/plain;charset=utf-8"],
-    txt: () => [`Cishu-${stamp()}.txt`, toTxt(exportRows()), "text/plain;charset=utf-8"],
+    xlsx: () => [`Shici-${stamp()}.xlsx`, toXlsx(exportRows()), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    csv: () => [`Shici-${stamp()}.csv`, "\ufeff" + toCsv(exportRows()), "text/csv;charset=utf-8"],
+    anki: () => [`Shici-Anki-${stamp()}.txt`, toAnki(exportRows()), "text/plain;charset=utf-8"],
+    txt: () => [`Shici-${stamp()}.txt`, toTxt(exportRows()), "text/plain;charset=utf-8"],
   };
   document.querySelectorAll(".export-format").forEach((b) =>
     b.addEventListener("click", () => saveFile(...FORMATS[b.dataset.format]())));

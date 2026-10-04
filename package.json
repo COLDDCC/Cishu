@@ -1,5 +1,5 @@
 {
-  "name": "cishu",
+  "name": "shici",
   "version": "0.1.0",
   "description": "粘贴日文，生成带中文释义和 JLPT 等级的生词表（纯静态）",
   "scripts": {
@@ -16,7 +16,7 @@
   "bugs": {
     "url": "https://github.com/COLDDCC/Cishu/issues"
   },
-  "homepage": "https://github.com/COLDDCC/Cishu#readme",
+  "homepage": "https://shicijp.com",
   "devDependencies": {
     "kuromoji": "^0.1.2"
   },

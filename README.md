@@ -1,4 +1,6 @@
-# 拾词（原名 词书 Cishu）
+# 拾词 Shici
+
+网址：https://shicijp.com （域名接好之前用 https://colddcc.github.io/Cishu/ ）
 
 Jisho 的中文版：粘贴任意日文（小说、吐槽、歌词、新闻都行），下面列出里面所有的词：读音、原形、中文释义、JLPT 等级。
 
@@ -25,7 +27,7 @@ Jisho 的中文版：粘贴任意日文（小说、吐槽、歌词、新闻都�
 
 ## 在线使用
 
-已发布为 claude.ai 网页：https://claude.ai/artifact/GLNmhuGtNmJt5iWuZiRuMh （默认只有自己能打开，可在页面的 Share 菜单里分享）。
+正式网址见开头。另外也发布成了 claude.ai 网页：https://claude.ai/artifact/GLNmhuGtNmJt5iWuZiRuMh （默认只有自己能打开，可在页面的 Share 菜单里分享）。
 更新方式：`python3 scripts/build_artifact.py` 生成 `artifact/`，再由 Claude 重新发布。那里不能读剪贴板，所以隐藏了「粘贴」按钮；下载会先弹出确认框。
 
 ## 本地运行
